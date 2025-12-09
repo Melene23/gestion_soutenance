@@ -1,0 +1,79 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Fichiers de build
+build/
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Fichiers Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+
+# Fichiers IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Fichiers de configuration locaux
+local.properties
+*.local
+
+# Fichiers de logs
+*.log
+logs/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Fichiers de test
+test_results/
+coverage/
+
+# Fichiers de dépendances
+node_modules/
+vendor/
+
+# Fichiers sensibles (ne pas commiter)
+.env
+.env.local
+*.pem
+*.key
+*.cert
+
+# Fichiers XAMPP/htdocs (ne pas commiter les fichiers déployés)
+# Les fichiers API doivent être dans le projet, pas dans htdocs
+
+# Fichiers de documentation temporaires (déjà supprimés)
+# RESULTAT_TEST.md
+# CONFIGURATION_API.md
+# etc.
+
+# Scripts PowerShell temporaires (déjà supprimés)
+# *.ps1 (sauf ceux nécessaires)
+

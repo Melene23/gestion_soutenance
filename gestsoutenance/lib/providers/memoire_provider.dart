@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/memoire.dart';
-import '../core/services/database_service.dart';
+import '../core/services/api_service.dart';
 
 class MemoireProvider with ChangeNotifier {
   List<Memoire> _memoires = [];
@@ -20,8 +20,8 @@ class MemoireProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final database = DatabaseService();
-      _memoires = await database.getMemoires();
+      final api = ApiService();
+      _memoires = await api.getMemoires();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des mémoires: $e';
@@ -33,9 +33,9 @@ class MemoireProvider with ChangeNotifier {
 
   Future<void> addMemoire(Memoire memoire) async {
     try {
-      _memoires.add(memoire);
-      final database = DatabaseService();
-      await database.saveMemoires(_memoires);
+      final api = ApiService();
+      final created = await api.createMemoire(memoire);
+      _memoires.add(created);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
@@ -46,11 +46,11 @@ class MemoireProvider with ChangeNotifier {
 
   Future<void> updateMemoire(Memoire memoire) async {
     try {
+      final api = ApiService();
+      final updated = await api.updateMemoire(memoire);
       final index = _memoires.indexWhere((m) => m.id == memoire.id);
       if (index != -1) {
-        _memoires[index] = memoire;
-        final database = DatabaseService();
-        await database.saveMemoires(_memoires);
+        _memoires[index] = updated;
         notifyListeners();
       }
     } catch (e) {
@@ -62,9 +62,9 @@ class MemoireProvider with ChangeNotifier {
 
   Future<void> deleteMemoire(String id) async {
     try {
+      final api = ApiService();
+      await api.deleteMemoire(id);
       _memoires.removeWhere((m) => m.id == id);
-      final database = DatabaseService();
-      await database.saveMemoires(_memoires);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';

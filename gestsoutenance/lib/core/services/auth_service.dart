@@ -15,6 +15,7 @@ class AuthService {
   String? _userNom;
   String? _userPrenom;
   String? _userId;
+  String? _lastError;
 
   // Clés pour SharedPreferences
   static const String _keyIsLoggedIn = 'is_logged_in';
@@ -37,34 +38,54 @@ class AuthService {
     }
   }
 
+  String? get lastError => _lastError;
+
   Future<bool> login(String email, String password) async {
     _lastError = null;
+    final client = http.Client();
+    
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}');
+      final url = Uri.parse('${ApiConfig.effectiveBaseUrl}${ApiConfig.loginEndpoint}');
       
-      final response = await http.post(
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('🔐 TENTATIVE DE CONNEXION');
+      debugPrint('URL: $url');
+      debugPrint('Email: $email');
+      debugPrint('Headers: ${ApiConfig.headers}');
+      debugPrint('═══════════════════════════════════════');
+      
+      final response = await client.post(
         url,
         headers: ApiConfig.headers,
         body: jsonEncode({
-          'email': email,
+          'email': email.trim(),
           'password': password,
         }),
       ).timeout(ApiConfig.timeout);
-
-      String responseBody = utf8.decode(response.bodyBytes);
-      dynamic data;
       
+      debugPrint('📥 RÉPONSE REÇUE');
+      debugPrint('Status Code: ${response.statusCode}');
+      debugPrint('Headers: ${response.headers}');
+      
+      String responseBody = utf8.decode(response.bodyBytes);
+      debugPrint('Body: $responseBody');
+      
+      dynamic data;
       try {
         data = jsonDecode(responseBody);
       } catch (e) {
         _lastError = 'Réponse invalide du serveur. Vérifiez que le serveur est bien démarré.';
-        debugPrint('Erreur de décodage JSON: $e');
-        debugPrint('Réponse du serveur: $responseBody');
+        debugPrint('❌ Erreur de décodage JSON: $e');
+        debugPrint('Réponse brute: $responseBody');
         return false;
       }
 
       if (response.statusCode == 200 && data['success'] == true) {
         final user = data['data']['user'];
+        
+        debugPrint('✅ CONNEXION RÉUSSIE');
+        debugPrint('User ID: ${user['id']}');
+        debugPrint('Email: ${user['email']}');
         
         _isLoggedIn = true;
         _userId = user['id'].toString();
@@ -82,26 +103,39 @@ class AuthService {
 
         return true;
       } else {
-        _lastError = data['message'] ?? 'Erreur de connexion';
-        debugPrint('Erreur de connexion: $_lastError');
+        _lastError = data['message'] ?? 'Email ou mot de passe incorrect';
+        debugPrint('❌ Erreur de connexion: $_lastError');
         return false;
       }
     } catch (e) {
-      if (e.toString().contains('TimeoutException') || e.toString().contains('timeout')) {
-        _lastError = 'Délai d\'attente dépassé. Vérifiez votre connexion internet et que le serveur est bien démarré.';
-      } else if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
-        _lastError = 'Impossible de se connecter au serveur. Vérifiez que le serveur est bien démarré et que l\'URL est correcte.';
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('❌ ERREUR LORS DE LA CONNEXION');
+      debugPrint('Type: ${e.runtimeType}');
+      debugPrint('Message: $e');
+      debugPrint('URL tentée: ${ApiConfig.effectiveBaseUrl}${ApiConfig.loginEndpoint}');
+      debugPrint('═══════════════════════════════════════');
+      
+      String errorString = e.toString();
+      
+      if (errorString.contains('TimeoutException') || errorString.contains('timeout')) {
+        _lastError = '⏱️ Délai d\'attente dépassé.\n\nVérifiez:\n- Votre connexion internet\n- Que le serveur est bien démarré (Apache dans XAMPP)\n- Que le port 80 n\'est pas bloqué';
+      } else if (errorString.contains('SocketException') || 
+                 errorString.contains('Failed host lookup') ||
+                 errorString.contains('Failed to fetch') ||
+                 errorString.contains('ClientException') ||
+                 errorString.contains('XMLHttpRequest') ||
+                 errorString.contains('NetworkError')) {
+        _lastError = '🌐 Impossible de se connecter au serveur.\n\nVérifications:\n1. ✅ Apache est démarré dans XAMPP\n2. ✅ MySQL est démarré dans XAMPP\n3. ✅ Testez l\'URL dans votre navigateur:\n   ${ApiConfig.effectiveBaseUrl}test.php\n4. 🔍 Ouvrez F12 > Console pour voir les erreurs CORS\n\nURL utilisée: ${ApiConfig.effectiveBaseUrl}${ApiConfig.loginEndpoint}';
+      } else if (errorString.contains('CORS') || errorString.contains('Access-Control')) {
+        _lastError = '🚫 Erreur CORS détectée.\n\nVérifiez que les en-têtes CORS sont bien configurés dans:\n- api/auth/login.php\n- api/auth/register.php\n\nOuvrez F12 > Network > cliquez sur la requête > Headers';
       } else {
-        _lastError = 'Erreur de connexion: ${e.toString()}';
+        _lastError = '❌ Erreur: ${e.toString()}\n\nURL: ${ApiConfig.effectiveBaseUrl}${ApiConfig.loginEndpoint}';
       }
-      debugPrint('Erreur lors de la connexion: $e');
       return false;
+    } finally {
+      client.close();
     }
   }
-
-  String? _lastError;
-
-  String? get lastError => _lastError;
 
   Future<bool> register({
     required String nom,
@@ -111,80 +145,104 @@ class AuthService {
   }) async {
     _lastError = null;
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}');
+      final url = Uri.parse('${ApiConfig.effectiveBaseUrl}${ApiConfig.registerEndpoint}');
       
-      final response = await http.post(
-        url,
-        headers: ApiConfig.headers,
-        body: jsonEncode({
-          'nom': nom,
-          'prenom': prenom,
-          'email': email,
-          'password': password,
-        }),
-      ).timeout(ApiConfig.timeout);
-
-      // Vérifier si la réponse est un JSON valide
-      String responseBody = utf8.decode(response.bodyBytes);
-      dynamic data;
+      debugPrint('Tentative d\'inscription vers: $url');
+      debugPrint('Headers: ${ApiConfig.headers}');
       
+      // Pour Flutter Web, utiliser Client avec des options spéciales
+      final client = http.Client();
       try {
-        data = jsonDecode(responseBody);
-      } catch (e) {
-        _lastError = 'Réponse invalide du serveur. Vérifiez que le serveur est bien démarré.';
-        debugPrint('Erreur de décodage JSON: $e');
-        debugPrint('Réponse du serveur: $responseBody');
-        return false;
-      }
-
-      if ((response.statusCode == 201 || response.statusCode == 200) && data['success'] == true) {
-        final user = data['data']['user'];
+        final response = await client.post(
+          url,
+          headers: ApiConfig.headers,
+          body: jsonEncode({
+            'nom': nom,
+            'prenom': prenom,
+            'email': email,
+            'password': password,
+          }),
+        ).timeout(ApiConfig.timeout);
         
-        _isLoggedIn = true;
-        _userId = user['id'].toString();
-        _currentUser = user['email'];
-        _userNom = user['nom'];
-        _userPrenom = user['prenom'];
-
-        // Sauvegarder dans SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool(_keyIsLoggedIn, true);
-        await prefs.setString(_keyUserId, _userId!);
-        await prefs.setString(_keyUserEmail, _currentUser!);
-        await prefs.setString(_keyUserNom, _userNom!);
-        await prefs.setString(_keyUserPrenom, _userPrenom!);
-
-        return true;
-      } else {
-        // Récupérer le message d'erreur du serveur
-        _lastError = data['message'] ?? 'Erreur lors de l\'inscription';
-        
-        // Si il y a des erreurs détaillées, les ajouter
-        if (data['data'] != null && data['data']['errors'] != null) {
-          final errors = data['data']['errors'] as List;
-          if (errors.isNotEmpty) {
-            _lastError = errors.join(', ');
-          }
-        }
-        
-        debugPrint('Erreur d\'inscription: $_lastError');
         debugPrint('Code de statut: ${response.statusCode}');
-        debugPrint('Réponse complète: $data');
-        return false;
+        debugPrint('Headers de réponse: ${response.headers}');
+
+        // Vérifier si la réponse est un JSON valide
+        String responseBody = utf8.decode(response.bodyBytes);
+        dynamic data;
+        
+        try {
+          data = jsonDecode(responseBody);
+        } catch (e) {
+          _lastError = 'Réponse invalide du serveur. Vérifiez que le serveur est bien démarré.';
+          debugPrint('Erreur de décodage JSON: $e');
+          debugPrint('Réponse du serveur: $responseBody');
+          return false;
+        }
+
+        if ((response.statusCode == 201 || response.statusCode == 200) && data['success'] == true) {
+          final user = data['data']['user'];
+          
+          _isLoggedIn = true;
+          _userId = user['id'].toString();
+          _currentUser = user['email'];
+          _userNom = user['nom'];
+          _userPrenom = user['prenom'];
+
+          // Sauvegarder dans SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(_keyIsLoggedIn, true);
+          await prefs.setString(_keyUserId, _userId!);
+          await prefs.setString(_keyUserEmail, _currentUser!);
+          await prefs.setString(_keyUserNom, _userNom!);
+          await prefs.setString(_keyUserPrenom, _userPrenom!);
+
+          return true;
+        } else {
+          // Récupérer le message d'erreur du serveur
+          _lastError = data['message'] ?? 'Erreur lors de l\'inscription';
+          
+          // Si il y a des erreurs détaillées, les ajouter
+          if (data['data'] != null && data['data']['errors'] != null) {
+            final errors = data['data']['errors'] as List;
+            if (errors.isNotEmpty) {
+              _lastError = errors.join(', ');
+            }
+          }
+          
+          debugPrint('Erreur d\'inscription: $_lastError');
+          debugPrint('Code de statut: ${response.statusCode}');
+          debugPrint('Réponse complète: $data');
+          return false;
+        }
+      } finally {
+        client.close();
       }
     } catch (e) {
-      if (e.toString().contains('TimeoutException') || e.toString().contains('timeout')) {
-        _lastError = 'Délai d\'attente dépassé. Vérifiez votre connexion internet et que le serveur est bien démarré.';
-      } else if (e.toString().contains('SocketException') || 
-                 e.toString().contains('Failed host lookup') ||
-                 e.toString().contains('Failed to fetch') ||
-                 e.toString().contains('ClientException')) {
-        _lastError = 'Impossible de se connecter au serveur. Vérifiez que:\n- Apache est démarré dans XAMPP\n- L\'URL est correcte: ${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}\n- Les permissions réseau sont activées';
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('❌ ERREUR LORS DE L\'INSCRIPTION');
+      debugPrint('Type: ${e.runtimeType}');
+      debugPrint('Message: $e');
+      debugPrint('URL tentée: ${ApiConfig.effectiveBaseUrl}${ApiConfig.registerEndpoint}');
+      debugPrint('═══════════════════════════════════════');
+      
+      String errorString = e.toString();
+      
+      if (errorString.contains('TimeoutException') || errorString.contains('timeout')) {
+        _lastError = '⏱️ Délai d\'attente dépassé.\n\nVérifiez:\n- Votre connexion internet\n- Que le serveur est bien démarré (Apache dans XAMPP)';
+      } else if (errorString.contains('SocketException') || 
+                 errorString.contains('Failed host lookup') ||
+                 errorString.contains('Failed to fetch') ||
+                 errorString.contains('ClientException') ||
+                 errorString.contains('NetworkError') ||
+                 errorString.contains('XMLHttpRequest')) {
+        _lastError = '🌐 Impossible de se connecter au serveur.\n\nVérifications:\n1. ✅ Apache est démarré dans XAMPP\n2. ✅ MySQL est démarré dans XAMPP\n3. ✅ Testez l\'URL: ${ApiConfig.effectiveBaseUrl}test.php\n4. 🔍 Ouvrez F12 > Console pour voir les erreurs\n\nURL: ${ApiConfig.effectiveBaseUrl}${ApiConfig.registerEndpoint}';
+      } else if (errorString.contains('CORS') || errorString.contains('Access-Control')) {
+        _lastError = '🚫 Erreur CORS détectée.\n\nVérifiez les en-têtes CORS dans:\n- api/auth/register.php\n\nOuvrez F12 > Network > Headers';
       } else {
-        _lastError = 'Erreur de connexion: ${e.toString()}';
+        _lastError = '❌ Erreur: ${e.toString()}\n\nURL: ${ApiConfig.effectiveBaseUrl}${ApiConfig.registerEndpoint}';
       }
-      debugPrint('Erreur lors de l\'inscription: $e');
-      debugPrint('URL tentée: ${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}');
+      
       return false;
     }
   }
@@ -202,6 +260,7 @@ class AuthService {
       _userNom = null;
       _userPrenom = null;
       _userId = null;
+      _lastError = null;
 
       // Supprimer de SharedPreferences
       final prefs = await SharedPreferences.getInstance();

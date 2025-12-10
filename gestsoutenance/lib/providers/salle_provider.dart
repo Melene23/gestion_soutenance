@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/salle.dart';
-import '../core/services/database_service.dart';
+import '../core/services/api_service.dart';
 
 class SalleProvider with ChangeNotifier {
   List<Salle> _salles = [];
@@ -20,8 +20,8 @@ class SalleProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final database = DatabaseService();
-      _salles = await database.getSalles();
+      final api = ApiService();
+      _salles = await api.getSalles();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des salles: $e';
@@ -33,9 +33,9 @@ class SalleProvider with ChangeNotifier {
 
   Future<void> addSalle(Salle salle) async {
     try {
-      _salles.add(salle);
-      final database = DatabaseService();
-      await database.saveSalles(_salles);
+      final api = ApiService();
+      final created = await api.createSalle(salle);
+      _salles.add(created);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
@@ -46,11 +46,11 @@ class SalleProvider with ChangeNotifier {
 
   Future<void> updateSalle(Salle salle) async {
     try {
+      final api = ApiService();
+      final updated = await api.updateSalle(salle);
       final index = _salles.indexWhere((s) => s.id == salle.id);
       if (index != -1) {
-        _salles[index] = salle;
-        final database = DatabaseService();
-        await database.saveSalles(_salles);
+        _salles[index] = updated;
         notifyListeners();
       }
     } catch (e) {
@@ -62,9 +62,9 @@ class SalleProvider with ChangeNotifier {
 
   Future<void> deleteSalle(String id) async {
     try {
+      final api = ApiService();
+      await api.deleteSalle(id);
       _salles.removeWhere((s) => s.id == id);
-      final database = DatabaseService();
-      await database.saveSalles(_salles);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';

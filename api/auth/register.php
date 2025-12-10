@@ -12,6 +12,18 @@
  * }
  */
 
+// En-têtes CORS (doivent être envoyés avant toute sortie)
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Max-Age: 3600');
+
+// Gérer les requêtes OPTIONS (preflight CORS)
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 require_once '../config/database.php';
 
 // Vérifier que la méthode est POST
@@ -109,7 +121,8 @@ try {
     error_log("Erreur d'inscription: " . $e->getMessage());
     error_log("Stack trace: " . $e->getTraceAsString());
     
-    sendResponse(false, 'Erreur lors de l\'inscription: ' . $e->getMessage(), ['error' => $e->getMessage()], 500);
+    sendResponse(false, 'Erreur lors de l\'inscription: ' . $e->
+    Message(), ['error' => $e->getMessage()], 500);
 }
 ?>
 

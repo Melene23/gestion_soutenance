@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Autoriser le trafic HTTP pour le développement local -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Pour l'émulateur Android -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Pour localhost (si nécessaire) -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    
+    <!-- Configuration par défaut : HTTPS uniquement -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+
+
+
+
+
+

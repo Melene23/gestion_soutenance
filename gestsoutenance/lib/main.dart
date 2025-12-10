@@ -5,6 +5,7 @@ import 'package:gestion_soutenances/features/memoires/add_memoire_page.dart';
 import 'package:gestion_soutenances/features/salles/add_salle_page.dart';
 import 'package:gestion_soutenances/features/soutenances/planifier_soutenance_page.dart';
 import 'package:gestion_soutenances/features/auth/home_page.dart';
+import 'package:gestion_soutenances/providers/metadata_provider.dart';
 import 'package:provider/provider.dart';
 import 'features/etudiants/etudiants_page.dart';
 import 'features/memoires/memoires_page.dart';
@@ -17,12 +18,16 @@ import 'providers/salle_provider.dart';
 import 'providers/soutenance_provider.dart';
 import 'core/services/auth_service.dart';
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialiser le service d'authentification
   final authService = AuthService();
   await authService.init();
+  
+  // Initialiser intl pour Flutter Web (dates en français)
+  // Cela corrige les problèmes de date picker sur le web
   
   runApp(const MyApp());
 }
@@ -39,6 +44,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MemoireProvider()),
         ChangeNotifierProvider(create: (_) => SalleProvider()),
         ChangeNotifierProvider(create: (_) => SoutenanceProvider()),
+        ChangeNotifierProvider(create: (_) => MetadataProvider()),
       ],
       child: MaterialApp(
         title: 'Gestion Soutenances',
@@ -161,6 +167,16 @@ class MyApp extends StatelessWidget {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: Color(0xFF2196F3),
         linearTrackColor: Color(0xFFE0E0E0),
+      ),
+      iconTheme: const IconThemeData(
+        color: Color(0xFF2C3E50),
+        size: 24,
+        opacity: 1.0,
+      ),
+      primaryIconTheme: const IconThemeData(
+        color: Color(0xFF2196F3),
+        size: 24,
+        opacity: 1.0,
       ),
     );
   }

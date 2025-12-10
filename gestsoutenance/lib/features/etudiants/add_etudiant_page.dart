@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/etudiant.dart';
 import '../../providers/etudiant_provider.dart';
+import '../../providers/metadata_provider.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/helpers.dart';
 
@@ -21,10 +22,10 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
   final _prenomController = TextEditingController();
   final _emailController = TextEditingController();
   final _telephoneController = TextEditingController();
-  final _filiereController = TextEditingController();
-  final _niveauController = TextEditingController();
   final _encadreurController = TextEditingController();
   
+  String? _selectedFiliere;
+  String? _selectedNiveau;
   bool _isLoading = false;
 
   @override
@@ -35,8 +36,8 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
       _prenomController.text = widget.etudiant!.prenom;
       _emailController.text = widget.etudiant!.email;
       _telephoneController.text = widget.etudiant!.telephone;
-      _filiereController.text = widget.etudiant!.filiere;
-      _niveauController.text = widget.etudiant!.niveau;
+      _selectedFiliere = widget.etudiant!.filiere;
+      _selectedNiveau = widget.etudiant!.niveau;
       _encadreurController.text = widget.etudiant!.encadreur;
     }
   }
@@ -47,8 +48,6 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
     _prenomController.dispose();
     _emailController.dispose();
     _telephoneController.dispose();
-    _filiereController.dispose();
-    _niveauController.dispose();
     _encadreurController.dispose();
     super.dispose();
   }
@@ -60,14 +59,23 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
 
     try {
       final provider = Provider.of<EtudiantProvider>(context, listen: false);
+      if (_selectedFiliere == null || _selectedNiveau == null) {
+        Helpers.showSnackBar(
+          context,
+          'Veuillez sélectionner une filière et un niveau',
+          isError: true,
+        );
+        return;
+      }
+      
       final etudiant = Etudiant(
         id: widget.etudiant?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         nom: _nomController.text.trim(),
         prenom: _prenomController.text.trim(),
         email: _emailController.text.trim(),
         telephone: _telephoneController.text.trim(),
-        filiere: _filiereController.text.trim(),
-        niveau: _niveauController.text.trim(),
+        filiere: _selectedFiliere!,
+        niveau: _selectedNiveau!,
         encadreur: _encadreurController.text.trim(),
       );
 
@@ -199,24 +207,154 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                 const SizedBox(height: 24),
 
                 _buildFormSection('Informations académiques', [
-                  _buildInputField(
-                    label: 'Filière *',
-                    controller: _filiereController,
-                    icon: Icons.school_outlined,
-                    validator: (value) => Validators.validateRequired(
-                      value, 
-                      fieldName: 'La filière'
-                    ),
+                  // Liste déroulante pour Filière
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Filière *',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF616161),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Consumer<MetadataProvider>(
+                        builder: (context, metadataProvider, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: _selectedFiliere == null 
+                                  ? const Color(0xFFE0E0E0) 
+                                  : const Color(0xFF2196F3),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedFiliere,
+                                isExpanded: true,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                hint: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(
+                                    'Sélectionnez une filière',
+                                    style: TextStyle(
+                                      color: Color(0xFF9E9E9E),
+                                    ),
+                                  ),
+                                ),
+                                items: metadataProvider.filieres.map((filiere) {
+                                  return DropdownMenuItem<String>(
+                                    value: filiere,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      child: Text(
+                                        filiere,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedFiliere = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      if (_selectedFiliere == null && _formKey.currentState?.validate() == false)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4, left: 4),
+                          child: Text(
+                            'Veuillez sélectionner une filière',
+                            style: TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  _buildInputField(
-                    label: 'Niveau *',
-                    controller: _niveauController,
-                    icon: Icons.star_outline,
-                    validator: (value) => Validators.validateRequired(
-                      value, 
-                      fieldName: 'Le niveau'
-                    ),
+                  // Liste déroulante pour Niveau
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Niveau *',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF616161),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Consumer<MetadataProvider>(
+                        builder: (context, metadataProvider, child) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: _selectedNiveau == null 
+                                  ? const Color(0xFFE0E0E0) 
+                                  : const Color(0xFF2196F3),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white,
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _selectedNiveau,
+                                isExpanded: true,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                hint: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: Text(
+                                    'Sélectionnez un niveau',
+                                    style: TextStyle(
+                                      color: Color(0xFF9E9E9E),
+                                    ),
+                                  ),
+                                ),
+                                items: metadataProvider.niveaux.map((niveau) {
+                                  return DropdownMenuItem<String>(
+                                    value: niveau,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      child: Text(
+                                        niveau,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Color(0xFF2C3E50),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedNiveau = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      if (_selectedNiveau == null && _formKey.currentState?.validate() == false)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 4, left: 4),
+                          child: Text(
+                            'Veuillez sélectionner un niveau',
+                            style: TextStyle(color: Colors.red, fontSize: 12),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   _buildInputField(

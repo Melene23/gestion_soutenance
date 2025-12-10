@@ -47,14 +47,25 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         } else if (mounted) {
+          // Afficher le message d'erreur spécifique du serveur
+          final errorMessage = authProvider.lastError ?? 'Email ou mot de passe incorrect';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Email ou mot de passe incorrect'),
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(errorMessage),
+                  ),
+                ],
+              ),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
+              duration: const Duration(seconds: 5),
             ),
           );
         }

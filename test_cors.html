@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test CORS API</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Test de connexion API</h1>
+    <button onclick="testRegister()">Tester l'inscription</button>
+    <button onclick="testLogin()">Tester la connexion</button>
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        async function testRegister() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Test en cours...';
+            
+            try {
+                const response = await fetch('http://localhost/gestsoutenance/api/auth/register.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        nom: 'Test',
+                        prenom: 'CORS',
+                        email: 'test_cors_' + Date.now() + '@test.com',
+                        password: 'test123'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = '<h3>Résultat de l\'inscription:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultDiv.innerHTML = '<h3 style="color: red;">Erreur:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+
+        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Test en cours...';
+            
+            try {
+                const response = await fetch('http://localhost/gestsoutenance/api/auth/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'test2@test.com',
+                        password: 'test123'
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = '<h3>Résultat de la connexion:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                resultDiv.innerHTML = '<h3 style="color: red;">Erreur:</h3><pre>' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>
+

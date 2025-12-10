@@ -19,6 +19,8 @@ class HomePage extends StatelessWidget {
               const Color(0xFF1565C0),
             ],
           ),
+
+          
         ),
         child: SafeArea(
           child: SingleChildScrollView(

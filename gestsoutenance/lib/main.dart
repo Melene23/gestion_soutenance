@@ -162,6 +162,14 @@ class MyApp extends StatelessWidget {
         color: Color(0xFF2196F3),
         linearTrackColor: Color(0xFFE0E0E0),
       ),
+      iconTheme: const IconThemeData(
+        color: Color(0xFF2C3E50),
+        size: 24,
+      ),
+      primaryIconTheme: const IconThemeData(
+        color: Color(0xFF2196F3),
+        size: 24,
+      ),
     );
   }
 }

@@ -129,3 +129,6 @@ Une fois toutes les vérifications faites, testez dans votre application Flutter
 4. Regardez l'onglet "Network" pour voir les requêtes HTTP
 5. Vérifiez les erreurs dans l'onglet "Console"
 
+
+
+

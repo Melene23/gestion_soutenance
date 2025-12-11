@@ -33,3 +33,6 @@ Write-Host "1. XAMPP est démarré (Apache et MySQL)" -ForegroundColor White
 Write-Host "2. Testez l'URL: http://localhost/gestsoutenance/api/test.php" -ForegroundColor White
 Write-Host ""
 
+
+
+

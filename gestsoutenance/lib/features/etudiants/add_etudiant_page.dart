@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/etudiant.dart';
 import '../../providers/etudiant_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/helpers.dart';
 
@@ -49,6 +50,7 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
   void initState() {
     super.initState();
     if (widget.etudiant != null) {
+      // Mode édition : charger les données de l'étudiant existant
       _nomController.text = widget.etudiant!.nom;
       _prenomController.text = widget.etudiant!.prenom;
       _emailController.text = widget.etudiant!.email;
@@ -56,6 +58,20 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
       _encadreurController.text = widget.etudiant!.encadreur ?? '';
       _selectedFiliere = widget.etudiant!.filiere;
       _selectedNiveau = widget.etudiant!.niveau;
+    } else {
+      // Mode ajout : récupérer les infos depuis l'inscription/connexion
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        if (authProvider.userNom != null && authProvider.userNom!.isNotEmpty) {
+          _nomController.text = authProvider.userNom!;
+        }
+        if (authProvider.userPrenom != null && authProvider.userPrenom!.isNotEmpty) {
+          _prenomController.text = authProvider.userPrenom!;
+        }
+        if (authProvider.currentUser != null && authProvider.currentUser!.isNotEmpty) {
+          _emailController.text = authProvider.currentUser!;
+        }
+      });
     }
   }
 
@@ -127,24 +143,34 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
           children: [
             Container(
               margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6366F1).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.school,
+                Icons.school_rounded,
                 size: 24,
-                color: Color(0xFF2196F3),
+                color: Colors.white,
               ),
             ),
             Text(
               widget.etudiant == null 
-                ? 'ENEAM - Ajouter un étudiant' 
-                : 'ENEAM - Modifier étudiant',
+                ? 'Ajouter un étudiant' 
+                : 'Modifier étudiant',
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
               ),
             ),
           ],
@@ -167,35 +193,67 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // En-tête
+                // En-tête moderne
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF6366F1).withOpacity(0.1),
+                        const Color(0xFF8B5CF6).withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFF2196F3).withOpacity(0.3),
+                      color: const Color(0xFF6366F1).withOpacity(0.2),
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        widget.etudiant == null 
-                          ? Icons.person_add_outlined 
-                          : Icons.person_outline,
-                        color: const Color(0xFF2196F3),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.etudiant == null
-                            ? 'Renseignez les informations de l\'étudiant ENEAM'
-                            : 'Modifiez les informations de l\'étudiant ENEAM',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF2C3E50),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
                           ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          widget.etudiant == null 
+                            ? Icons.person_add_rounded 
+                            : Icons.person_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.etudiant == null
+                                ? 'Nouvel étudiant'
+                                : 'Modifier étudiant',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.etudiant == null
+                                ? 'Les informations de connexion seront pré-remplies'
+                                : 'Mettez à jour les informations',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -241,10 +299,11 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: _selectedFiliere == null 
-                              ? const Color(0xFFE0E0E0) 
-                              : const Color(0xFF2196F3),
+                              ? Colors.grey.shade300
+                              : const Color(0xFF6366F1),
+                            width: _selectedFiliere == null ? 1 : 2,
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           color: Colors.white,
                         ),
                         child: DropdownButtonHideUnderline(
@@ -313,10 +372,11 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: _selectedNiveau == null 
-                              ? const Color(0xFFE0E0E0) 
-                              : const Color(0xFF2196F3),
+                              ? Colors.grey.shade300
+                              : const Color(0xFF6366F1),
+                            width: _selectedNiveau == null ? 1 : 2,
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           color: Colors.white,
                         ),
                         child: DropdownButtonHideUnderline(
@@ -397,27 +457,38 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
 
                 const SizedBox(height: 32),
 
-                // Bouton d'action
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _saveEtudiant,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                // Bouton d'action moderne
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withOpacity(0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
                       ),
-                      elevation: 2,
-                    ),
-                    child: _isLoading
+                    ],
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveEtudiant,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6366F1),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isLoading
                         ? const SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : Row(
@@ -425,22 +496,24 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                             children: [
                               Icon(
                                 widget.etudiant == null 
-                                  ? Icons.add_circle_outline 
-                                  : Icons.save_outlined,
-                                size: 20,
+                                  ? Icons.add_circle_rounded 
+                                  : Icons.save_rounded,
+                                size: 22,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Text(
                                 widget.etudiant == null 
-                                  ? 'AJOUTER L\'ÉTUDIANT' 
-                                  : 'ENREGISTRER LES MODIFICATIONS',
+                                  ? 'Ajouter l\'étudiant' 
+                                  : 'Enregistrer les modifications',
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 16,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
                           ),
+                    ),
                   ),
                 ),
 
@@ -527,16 +600,16 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
               color: const Color(0xFF757575),
             ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2196F3), width: 2),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF6366F1), width: 2.5),
             ),
             filled: true,
             fillColor: Colors.white,

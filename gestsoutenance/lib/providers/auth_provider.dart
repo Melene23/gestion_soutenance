@@ -7,13 +7,28 @@ class AuthProvider extends ChangeNotifier {
   String? _currentUser;
   String? _userNom;
   String? _userPrenom;
+  bool _isInitialized = false;
 
   AuthProvider() {
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // Attendre que AuthService soit initialisé
+    await _authService.init();
+    _loadAuthState();
+    _isInitialized = true;
+    notifyListeners();
+  }
+
+  void _loadAuthState() {
     _isLoggedIn = _authService.isLoggedIn;
     _currentUser = _authService.currentUser;
     _userNom = _authService.userNom;
     _userPrenom = _authService.userPrenom;
   }
+
+  bool get isInitialized => _isInitialized;
 
   bool get isLoggedIn => _isLoggedIn;
   String? get currentUser => _currentUser;

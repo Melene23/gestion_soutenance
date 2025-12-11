@@ -11,12 +11,18 @@ import 'features/etudiants/etudiants_page.dart';
 import 'features/memoires/memoires_page.dart';
 import 'features/salles/salles_page.dart';
 import 'features/soutenances/soutenances_page.dart';
+import 'features/auth/home_page.dart';
 import 'providers/etudiant_provider.dart';
 import 'providers/memoire_provider.dart';
 import 'providers/salle_provider.dart';
 import 'providers/soutenance_provider.dart';
+import 'providers/auth_provider.dart';
+import 'core/services/auth_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Initialiser AuthService pour charger l'état de connexion depuis SharedPreferences
+  await AuthService().init();
   runApp(const MyApp());
 }
 
@@ -27,6 +33,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => EtudiantProvider()),
         ChangeNotifierProvider(create: (_) => MemoireProvider()),
         ChangeNotifierProvider(create: (_) => SalleProvider()),
@@ -49,7 +56,7 @@ class MyApp extends StatelessWidget {
         ],
         locale: const Locale('fr', 'FR'),
         
-        home: const MainScreen(),
+        home: const AuthWrapper(),
       ),
     );
   }
@@ -509,6 +516,23 @@ class _MainScreenState extends State<MainScreen> {
         ),
         margin: const EdgeInsets.all(16),
       ),
+    );
+  }
+}
+
+// Widget qui vérifie l'état de connexion et affiche la bonne page
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        // Toujours afficher HomePage au démarrage pour permettre à l'utilisateur
+        // de voir la page d'accueil et choisir de se connecter
+        // La navigation vers MainScreen se fera après la connexion depuis LoginPage
+        return const HomePage();
+      },
     );
   }
 }

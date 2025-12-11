@@ -45,8 +45,8 @@ class AuthService {
     final client = http.Client();
     
     try {
-      // Utiliser directement l'URL complète pour éviter les problèmes
-      final url = Uri.parse('http://localhost/api/auth/login.php');
+      // Utiliser ApiConfig pour gérer automatiquement l'URL selon la plateforme
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}');
       
       debugPrint('═══════════════════════════════════════');
       debugPrint('🔐 TENTATIVE DE CONNEXION');
@@ -147,7 +147,8 @@ class AuthService {
   }) async {
     _lastError = null;
     try {
-      final url = Uri.parse('http://localhost/api/auth/register.php');
+      // Utiliser ApiConfig pour gérer automatiquement l'URL selon la plateforme
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}');
       
       debugPrint('Tentative d\'inscription vers: $url');
       

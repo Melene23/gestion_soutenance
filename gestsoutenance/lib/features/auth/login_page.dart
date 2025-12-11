@@ -40,7 +40,7 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (success && mounted) {
-          // Rediriger vers l'application principale
+          // Naviguer directement vers MainScreen après connexion réussie
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => const MainScreen(),

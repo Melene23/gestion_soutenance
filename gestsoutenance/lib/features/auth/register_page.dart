@@ -70,7 +70,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           );
           
-          // Rediriger vers l'application principale
+          // Naviguer directement vers MainScreen après inscription réussie
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => const MainScreen(),

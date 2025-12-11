@@ -119,7 +119,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Rechercher une soutenance...',
-                      prefixIcon: const Icon(Icons.search_outlined),
+                      prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -140,7 +140,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.calendar_today_outlined, color: Colors.blue),
+                          const Icon(Icons.calendar_today, color: Colors.blue),
                           const SizedBox(width: 12),
                           Text(
                             'Soutenances du ${Helpers.formatDate(_selectedDate)}',
@@ -150,7 +150,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
                               color: Colors.blue,
                             ),
                           ),
-                          const Icon(Icons.arrow_drop_down_outlined, color: Colors.blue),
+                          const Icon(Icons.arrow_drop_down, color: Colors.blue),
                         ],
                       ),
                     ),
@@ -165,7 +165,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.schedule,
+                            Icons.schedule_outlined,
                             size: 64,
                             color: Colors.grey,
                           ),
@@ -236,7 +236,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.school_outlined,
+                    Icons.school,
                     color: Colors.blue,
                     size: 24,
                   ),
@@ -285,7 +285,7 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.people_outlined, size: 16, color: Colors.grey),
+                const Icon(Icons.people, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(

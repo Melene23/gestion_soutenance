@@ -43,6 +43,8 @@ class Memoire {
   final EtatMemoire etat;
   final DateTime dateDebut;
   final DateTime? dateSoutenance;
+  final String? fichierPath;  // AJOUTÉ
+  final String? fileName;     // AJOUTÉ
 
   Memoire({
     required this.id,
@@ -53,6 +55,8 @@ class Memoire {
     required this.etat,
     required this.dateDebut,
     this.dateSoutenance,
+    this.fichierPath,         // AJOUTÉ
+    this.fileName,            // AJOUTÉ
   });
 
   // Méthode toJson
@@ -85,8 +89,7 @@ class Memoire {
     );
   }
 
-  // Méthode copyWith
-  Memoire copyWith({
+   Memoire copyWith({
     String? id,
     String? etudiantId,
     String? theme,
@@ -95,6 +98,8 @@ class Memoire {
     EtatMemoire? etat,
     DateTime? dateDebut,
     DateTime? dateSoutenance,
+    String? fichierPath,      // AJOUTÉ
+    String? fileName,         // AJOUTÉ
   }) {
     return Memoire(
       id: id ?? this.id,
@@ -105,6 +110,8 @@ class Memoire {
       etat: etat ?? this.etat,
       dateDebut: dateDebut ?? this.dateDebut,
       dateSoutenance: dateSoutenance ?? this.dateSoutenance,
+      fichierPath: fichierPath ?? this.fichierPath,  // AJOUTÉ
+      fileName: fileName ?? this.fileName,           // AJOUTÉ
     );
   }
 }

@@ -31,11 +31,14 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
   TimeOfDay? _selectedTime;
   
   bool _isLoading = false;
+  bool _isInitialized = false;
   final Uuid _uuid = const Uuid();
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialiser avec les données existantes si modification
     if (widget.soutenance != null) {
       _selectedMemoireId = widget.soutenance!.memoireId;
       _selectedSalleId = widget.soutenance!.salleId;
@@ -43,6 +46,42 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
       _selectedTime = TimeOfDay.fromDateTime(widget.soutenance!.dateHeure);
       _juryController.text = widget.soutenance!.jury.join(', ');
       _notesController.text = widget.soutenance!.notes ?? '';
+    }
+    
+    // Charger les données après le premier rendu
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeData();
+    });
+  }
+
+  Future<void> _initializeData() async {
+    if (_isInitialized) return;
+    
+    try {
+      // Charger les mémoires si nécessaire
+      final memoireProvider = Provider.of<MemoireProvider>(context, listen: false);
+      if (memoireProvider.memoires.isEmpty) {
+        await memoireProvider.loadMemoires();
+      }
+      
+      // Note: Si loadSalles() existe, elle sera appelée automatiquement par le provider
+      // On ne fait rien de spécial ici
+      
+      // Si c'est une modification et le mémoire sélectionné n'est plus dans la liste,
+      // l'ajouter temporairement
+      if (widget.soutenance != null && _selectedMemoireId != null) {
+        final memoire = memoireProvider.getMemoireById(_selectedMemoireId!);
+        if (memoire == null) {
+          print('Attention: Mémoire ${_selectedMemoireId} non trouvé pour la soutenance en modification');
+        }
+      }
+      
+      _isInitialized = true;
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Erreur lors de l\'initialisation: $e');
     }
   }
 
@@ -53,8 +92,10 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
     super.dispose();
   }
 
-  Future<void> _saveSoutenance() async {
+  void _saveSoutenance() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Validation des champs obligatoires
     if (_selectedMemoireId == null) {
       Helpers.showSnackBar(context, 'Veuillez sélectionner un mémoire', isError: true);
       return;
@@ -72,6 +113,7 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
       return;
     }
 
+    // Créer la date/heure complète
     final dateHeure = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
@@ -84,11 +126,16 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
     final soutenanceProvider = Provider.of<SoutenanceProvider>(context, listen: false);
     
     // Vérifier conflit salle
-    final hasSalleConflict = soutenanceProvider.hasSalleConflict?.call(
-      _selectedSalleId!,
-      dateHeure,
-      excludeId: widget.soutenance?.id,
-    ) ?? false;
+    bool hasSalleConflict = false;
+    try {
+      hasSalleConflict = soutenanceProvider.hasSalleConflict?.call(
+        _selectedSalleId!,
+        dateHeure,
+        excludeId: widget.soutenance?.id,
+      ) ?? false;
+    } catch (e) {
+      print('Erreur lors de la vérification de conflit salle: $e');
+    }
     
     if (hasSalleConflict) {
       Helpers.showSnackBar(context, 'Cette salle est déjà occupée à cette heure', isError: true);
@@ -96,11 +143,16 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
     }
 
     // Vérifier conflit mémoire
-    final hasMemoireConflict = soutenanceProvider.hasMemoireConflict?.call(
-      _selectedMemoireId!,
-      dateHeure,
-      excludeId: widget.soutenance?.id,
-    ) ?? false;
+    bool hasMemoireConflict = false;
+    try {
+      hasMemoireConflict = soutenanceProvider.hasMemoireConflict?.call(
+        _selectedMemoireId!,
+        dateHeure,
+        excludeId: widget.soutenance?.id,
+      ) ?? false;
+    } catch (e) {
+      print('Erreur lors de la vérification de conflit mémoire: $e');
+    }
     
     if (hasMemoireConflict) {
       Helpers.showSnackBar(context, 'Ce mémoire a déjà une soutenance prévue', isError: true);
@@ -159,7 +211,9 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
         isError: true,
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -169,16 +223,7 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
       initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2196F3),
-            ),
-          ),
-          child: child!,
-        );
-      },
+      locale: const Locale('fr', 'FR'),
     );
     if (picked != null) {
       setState(() {
@@ -204,13 +249,21 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
     final memoireProvider = Provider.of<MemoireProvider>(context);
     final salleProvider = Provider.of<SalleProvider>(context);
     
-    // Filtrer les mémoires qui peuvent avoir une soutenance
-    final memoires = memoireProvider.memoires
-        .where((m) => m.etat != EtatMemoire.valide) // Exclure les déjà validés
-        .toList();
+    // Utiliser un filtre simple
+    final memoires = memoireProvider.memoires.where((m) {
+      return m.etat != EtatMemoire.valide || 
+             (widget.soutenance != null && m.id == widget.soutenance!.memoireId);
+    }).toList();
     
-    // Obtenir les salles disponibles (ou toutes si pas de méthode spécifique)
     final salles = salleProvider.salles;
+
+    // Afficher un message si pas de données - CORRECTION ICI
+    if (!_isInitialized && memoireProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Planification')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -222,7 +275,7 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
         actions: [
           if (widget.soutenance != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(Icons.delete),
               onPressed: () => _showDeleteConfirmation(context),
             ),
         ],
@@ -258,7 +311,17 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                         isExpanded: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         hint: const Text('Sélectionnez un mémoire'),
-                        items: memoires.map((memoire) {
+                        items: memoires.isEmpty
+                            ? [
+                                DropdownMenuItem<String>(
+                                  value: null,
+                                  child: const Text(
+                                    'Aucun mémoire disponible',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              ]
+                            : memoires.map((memoire) {
                           return DropdownMenuItem<String>(
                             value: memoire.id,
                             child: Column(
@@ -268,24 +331,45 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                                 Text(
                                   memoire.theme,
                                   overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14, 
+                                    fontWeight: FontWeight.w500
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'État: ${memoire.etat.displayName}',
-                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  style: TextStyle(
+                                    fontSize: 12, 
+                                    color: memoire.etat.color,
+                                  ),
                                 ),
                               ],
                             ),
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedMemoireId = value;
-                          });
-                        },
+                        onChanged: memoires.isEmpty 
+                            ? null 
+                            : (value) {
+                                setState(() {
+                                  _selectedMemoireId = value;
+                                });
+                              },
                       ),
                     ),
                   ),
+                  if (memoires.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Aucun mémoire disponible pour soutenance. '
+                        'Assurez-vous d\'avoir des mémoires en préparation.',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   if (_selectedMemoireId == null && _formKey.currentState?.validate() == false)
                     const Padding(
                       padding: EdgeInsets.only(top: 4, left: 4),
@@ -323,7 +407,17 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                         isExpanded: true,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         hint: const Text('Sélectionnez une salle'),
-                        items: salles.map((salle) {
+                        items: salles.isEmpty
+                            ? [
+                                DropdownMenuItem<String>(
+                                  value: null,
+                                  child: const Text(
+                                    'Aucune salle disponible',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              ]
+                            : salles.map((salle) {
                           return DropdownMenuItem<String>(
                             value: salle.id,
                             child: Column(
@@ -340,14 +434,27 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedSalleId = value;
-                          });
-                        },
+                        onChanged: salles.isEmpty 
+                            ? null 
+                            : (value) {
+                                setState(() {
+                                  _selectedSalleId = value;
+                                });
+                              },
                       ),
                     ),
                   ),
+                  if (salles.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Aucune salle disponible. Veuillez d\'abord créer des salles.',
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   if (_selectedSalleId == null && _formKey.currentState?.validate() == false)
                     const Padding(
                       padding: EdgeInsets.only(top: 4, left: 4),
@@ -382,13 +489,22 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                             height: 56,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
-                              border: Border.all(color: _selectedDate == null ? Colors.grey : Colors.blue),
+                              border: Border.all(
+                                color: _selectedDate == null 
+                                  ? Colors.grey 
+                                  : Colors.blue,
+                                width: _selectedDate == null ? 1.0 : 2.0,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                               color: Colors.white,
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+                                const Icon(
+                                  Icons.calendar_today, 
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
@@ -396,13 +512,18 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                                         ? Helpers.formatDate(_selectedDate!)
                                         : 'Sélectionner une date',
                                     style: TextStyle(
-                                      color: _selectedDate == null ? Colors.grey : Colors.black,
+                                      color: _selectedDate == null 
+                                        ? Colors.grey 
+                                        : Colors.black87,
+                                      fontWeight: _selectedDate == null 
+                                        ? FontWeight.normal 
+                                        : FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 if (_selectedDate != null)
                                   IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
+                                    icon: const Icon(Icons.clear, size: 18),
                                     onPressed: () {
                                       setState(() {
                                         _selectedDate = null;
@@ -436,27 +557,41 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                             height: 56,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
-                              border: Border.all(color: _selectedTime == null ? Colors.grey : Colors.blue),
+                              border: Border.all(
+                                color: _selectedTime == null 
+                                  ? Colors.grey 
+                                  : Colors.blue,
+                                width: _selectedTime == null ? 1.0 : 2.0,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                               color: Colors.white,
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.access_time_outlined, color: Colors.grey),
+                                const Icon(
+                                  Icons.access_time, 
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     _selectedTime != null
-                                        ? Helpers.formatTime(_selectedTime!)
+                                        ? _formatTime(_selectedTime!)
                                         : 'Sélectionner une heure',
                                     style: TextStyle(
-                                      color: _selectedTime == null ? Colors.grey : Colors.black,
+                                      color: _selectedTime == null 
+                                        ? Colors.grey 
+                                        : Colors.black87,
+                                      fontWeight: _selectedTime == null 
+                                        ? FontWeight.normal 
+                                        : FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 if (_selectedTime != null)
                                   IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
+                                    icon: const Icon(Icons.clear, size: 18),
                                     onPressed: () {
                                       setState(() {
                                         _selectedTime = null;
@@ -480,7 +615,10 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
                 maxLines: 3,
                 minLines: 2,
                 hintText: 'Ex: Pr. Dupont, Dr. Martin, M. Durand',
-                validator: (value) => Validators.validateRequired(value, fieldName: 'Les membres du jury'),
+                validator: (value) => Validators.validateRequired(
+                  value, 
+                  fieldName: 'Les membres du jury'
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -492,11 +630,34 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
               ),
               const SizedBox(height: 32),
 
-              CustomButton(
-                text: widget.soutenance == null ? 'Planifier' : 'Modifier',
-                onPressed: _saveSoutenance,
-                loading: _isLoading,
+              // CORRECTION DU BOUTON - Version simplifiée
+              SizedBox(
                 width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (_isLoading || memoires.isEmpty || salles.isEmpty)
+                      ? null
+                      : () => _saveSoutenance(),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Theme.of(context).primaryColor,
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          widget.soutenance == null ? 'Planifier' : 'Modifier',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -504,6 +665,11 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
         ),
       ),
     );
+  }
+
+  // Méthode helper pour formater l'heure
+  String _formatTime(TimeOfDay time) {
+    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
   void _showDeleteConfirmation(BuildContext context) {
@@ -522,9 +688,15 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
               onPressed: () async {
                 Navigator.pop(context);
                 try {
-                  final provider = Provider.of<SoutenanceProvider>(context, listen: false);
+                  final provider = Provider.of<SoutenanceProvider>(
+                    context, 
+                    listen: false,
+                  );
                   await provider.deleteSoutenance(widget.soutenance!.id);
-                  Helpers.showSnackBar(context, 'Soutenance supprimée avec succès');
+                  Helpers.showSnackBar(
+                    context, 
+                    'Soutenance supprimée avec succès'
+                  );
                   Navigator.pop(context);
                 } catch (e) {
                   Helpers.showSnackBar(

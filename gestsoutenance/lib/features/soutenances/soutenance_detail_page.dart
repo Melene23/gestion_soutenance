@@ -47,7 +47,7 @@ class SoutenanceDetailPage extends StatelessWidget {
         title: const Text('Détails de la soutenance'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit),
             onPressed: () {
               Navigator.push(
                 context,
@@ -131,7 +131,7 @@ class SoutenanceDetailPage extends StatelessWidget {
                       ),
                       title: Text(etudiant.nomComplet),
                       subtitle: Text('${etudiant.filiere} - ${etudiant.niveau}'),
-                      trailing: const Icon(Icons.chevron_right_outlined),
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         // Naviguer vers le détail de l'étudiant
                       },
@@ -167,7 +167,7 @@ class SoutenanceDetailPage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                        const Icon(Icons.person, size: 16, color: Colors.grey),
                         const SizedBox(width: 8),
                         Text(membre),
                       ],

@@ -1,5 +1,5 @@
-name: gestion_soutenances
-description: Application de gestion des soutenances académiques
+﻿name: gestion_soutenances
+description: Application de gestion des soutenances académiques        
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,16 +9,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  http: ^1.2.0
   provider: ^6.1.1
   shared_preferences: ^2.2.2
-  intl: ^0.19.0
   uuid: ^4.4.0
-  http: ^1.1.0
-  cupertino_icons: ^1.0.2
-  material_design_icons_flutter: ^7.0.7296
-  font_awesome_flutter: ^10.6.0
+  file_picker: ^6.1.1
+  intl: ^0.20.2
+  # Ajoutez cette ligne :
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  

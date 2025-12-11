@@ -330,54 +330,87 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            // ICÔNE CHAPEAU ENEAM - AJOUTÉ ICI
+            // Icône moderne avec gradient
             Container(
               margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF6366F1).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.school, // Icône chapeau de diplômé ENEAM
-                size: 28,
-                color: Color(0xFF2196F3),
+                Icons.school_rounded,
+                size: 24,
+                color: Colors.white,
               ),
             ),
-            // Titre avec mention ENEAM
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'ENEAM - ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2196F3),
-                      ),
+            // Titre moderne
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _pageTitles[_selectedIndex],
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                      letterSpacing: -0.5,
                     ),
-                    Text(
-                      _pageTitles[_selectedIndex],
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2C3E50),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _getSubtitle(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF757575),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    _getSubtitle(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Badge admin si admin
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                if (authProvider.isAdmin) {
+                  return Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.admin_panel_settings_rounded, size: 16, color: Colors.white),
+                        SizedBox(width: 4),
+                        Text(
+                          'Admin',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
           ],
         ),
@@ -385,7 +418,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       body: _pages[_selectedIndex],
       bottomNavigationBar: _buildCustomBottomNavigationBar(),
-      floatingActionButton: _buildFloatingActionButton(),
+      floatingActionButton: _buildFloatingActionButton() ?? const SizedBox.shrink(),
     );
   }
 
@@ -435,14 +468,14 @@ class _MainScreenState extends State<MainScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: IconButton(
-        icon: Icon(icon, size: 20),
+        icon: Icon(icon, size: 22),
         onPressed: onPressed,
         tooltip: tooltip,
-        color: const Color(0xFF2196F3),
+        color: const Color(0xFF6366F1),
       ),
     );
   }
@@ -519,37 +552,47 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    final String tooltip = _getFABTooltip();
-    
-    return FloatingActionButton(
-      onPressed: () {
-        _navigateToAddPage();
-      },
-      tooltip: tooltip,
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF2196F3).withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+  Widget? _buildFloatingActionButton() {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        // Seuls les admins peuvent ajouter des éléments
+        if (!authProvider.isAdmin) {
+          return const SizedBox.shrink();
+        }
+        
+        final String tooltip = _getFABTooltip();
+        
+        return FloatingActionButton(
+          onPressed: () {
+            _navigateToAddPage();
+          },
+          tooltip: tooltip,
+          child: Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withOpacity(0.4),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: const Icon(
-          Icons.add,
-          size: 28,
-        ),
-      ),
+            child: const Icon(
+              Icons.add_rounded,
+              size: 28,
+              color: Colors.white,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -569,6 +612,14 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _navigateToAddPage() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Vérifier que l'utilisateur est admin
+    if (!authProvider.isAdmin) {
+      _showSnackBar('Accès réservé aux administrateurs');
+      return;
+    }
+    
     switch (_selectedIndex) {
       case 0:
         Navigator.push(

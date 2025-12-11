@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../models/memoire.dart';
 import '../../providers/memoire_provider.dart';
 import '../../providers/etudiant_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_card.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/permissions.dart';
 import 'add_memoire_page.dart';
 import 'memoire_detail_page.dart';
 
@@ -55,9 +57,27 @@ class _MemoiresPageState extends State<MemoiresPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MemoireProvider>(
-      builder: (context, provider, child) {
-        List<Memoire> filteredMemoires = _filterMemoires(provider.memoires, _selectedFilter);
+    return Consumer2<MemoireProvider, AuthProvider>(
+      builder: (context, provider, authProvider, child) {
+        // Filtrer selon le rôle
+        List<Memoire> allMemoires = provider.memoires;
+        List<Memoire> memoiresToShow;
+        
+        if (Permissions.isAdmin(authProvider)) {
+          // Admin voit tous les mémoires
+          memoiresToShow = allMemoires;
+        } else {
+          // Étudiant voit seulement ses mémoires (via email dans etudiants)
+          final etudiantProvider = Provider.of<EtudiantProvider>(context, listen: false);
+          final userEmail = authProvider.currentUser?.toLowerCase() ?? '';
+          
+          memoiresToShow = allMemoires.where((memoire) {
+            final etudiant = etudiantProvider.getEtudiantById(memoire.etudiantId);
+            return etudiant?.email.toLowerCase() == userEmail;
+          }).toList();
+        }
+        
+        List<Memoire> filteredMemoires = _filterMemoires(memoiresToShow, _selectedFilter);
 
         if (_searchQuery.isNotEmpty) {
           filteredMemoires = filteredMemoires.where((memoire) {

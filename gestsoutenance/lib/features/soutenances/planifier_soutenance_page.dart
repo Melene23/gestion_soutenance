@@ -6,10 +6,12 @@ import '../../models/memoire.dart';
 import '../../providers/soutenance_provider.dart';
 import '../../providers/memoire_provider.dart';
 import '../../providers/salle_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_input.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/permissions.dart';
 
 class PlanifierSoutenancePage extends StatefulWidget {
   final Soutenance? soutenance;
@@ -246,6 +248,54 @@ class _PlanifierSoutenancePageState extends State<PlanifierSoutenancePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Vérifier que l'utilisateur est admin
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        if (!Permissions.isAdmin(authProvider)) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Accès refusé'),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.lock_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Accès réservé aux administrateurs',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Seuls les administrateurs peuvent planifier des soutenances',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Retour'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        return _buildPlanifierContent(context);
+      },
+    );
+  }
+  
+  Widget _buildPlanifierContent(BuildContext context) {
     final memoireProvider = Provider.of<MemoireProvider>(context);
     final salleProvider = Provider.of<SalleProvider>(context);
     

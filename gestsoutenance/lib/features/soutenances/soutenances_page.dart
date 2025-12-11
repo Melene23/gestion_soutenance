@@ -5,8 +5,10 @@ import '../../providers/soutenance_provider.dart';
 import '../../providers/memoire_provider.dart';
 import '../../providers/etudiant_provider.dart';
 import '../../providers/salle_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_card.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/permissions.dart';
 import 'planifier_soutenance_page.dart';
 import 'soutenance_detail_page.dart';
 
@@ -54,9 +56,30 @@ class _SoutenancesPageState extends State<SoutenancesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SoutenanceProvider>(
-      builder: (context, provider, child) {
-        List<Soutenance> filteredSoutenances = provider.getSoutenancesByDate(_selectedDate);
+    return Consumer2<SoutenanceProvider, AuthProvider>(
+      builder: (context, provider, authProvider, child) {
+        List<Soutenance> allSoutenances = provider.getSoutenancesByDate(_selectedDate);
+        List<Soutenance> filteredSoutenances;
+        
+        // Filtrer selon le rôle
+        if (Permissions.isAdmin(authProvider)) {
+          // Admin voit toutes les soutenances
+          filteredSoutenances = allSoutenances;
+        } else {
+          // Étudiant voit seulement ses soutenances (via email dans etudiants)
+          final etudiantProvider = Provider.of<EtudiantProvider>(context, listen: false);
+          final memoireProvider = Provider.of<MemoireProvider>(context, listen: false);
+          final userEmail = authProvider.currentUser?.toLowerCase() ?? '';
+          
+          filteredSoutenances = allSoutenances.where((soutenance) {
+            // Passer par le mémoire pour obtenir l'étudiant
+            final memoire = memoireProvider.getMemoireById(soutenance.memoireId);
+            if (memoire == null) return false;
+            
+            final etudiant = etudiantProvider.getEtudiantById(memoire.etudiantId);
+            return etudiant?.email.toLowerCase() == userEmail;
+          }).toList();
+        }
 
         if (_searchQuery.isNotEmpty) {
           filteredSoutenances = filteredSoutenances.where((soutenance) {

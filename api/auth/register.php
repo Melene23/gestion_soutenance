@@ -87,8 +87,8 @@ try {
     // Hasher le mot de passe
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
-    // Insérer le nouvel utilisateur
-    $stmt = $conn->prepare("INSERT INTO utilisateurs (nom, prenom, email, password, date_creation) VALUES (?, ?, ?, ?, NOW())");
+    // Insérer le nouvel utilisateur (par défaut role='etudiant')
+    $stmt = $conn->prepare("INSERT INTO utilisateurs (nom, prenom, email, password, role, date_creation) VALUES (?, ?, ?, ?, 'etudiant', NOW())");
     
     if (!$stmt) {
         throw new Exception("Erreur de préparation de la requête: " . $conn->error);
@@ -99,8 +99,8 @@ try {
     if ($stmt->execute()) {
         $userId = $conn->insert_id;
         
-        // Récupérer les informations de l'utilisateur créé
-        $stmt = $conn->prepare("SELECT id, nom, prenom, email FROM utilisateurs WHERE id = ?");
+        // Récupérer les informations de l'utilisateur créé (avec role)
+        $stmt = $conn->prepare("SELECT id, nom, prenom, email, COALESCE(role, 'etudiant') as role FROM utilisateurs WHERE id = ?");
         $stmt->bind_param("i", $userId);
         $stmt->execute();
         $result = $stmt->get_result();

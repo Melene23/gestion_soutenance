@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/etudiant.dart';
 import '../../providers/etudiant_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_card.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/permissions.dart';
 import 'etudiant_detail_page.dart';
 
 
@@ -36,9 +38,22 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<EtudiantProvider>(
-      builder: (context, provider, child) {
-        final etudiants = provider.searchEtudiants(_searchQuery);
+    return Consumer2<EtudiantProvider, AuthProvider>(
+      builder: (context, provider, authProvider, child) {
+        // Filtrer selon le rôle
+        List<Etudiant> allEtudiants = provider.searchEtudiants(_searchQuery);
+        List<Etudiant> etudiants;
+        
+        if (Permissions.isAdmin(authProvider)) {
+          // Admin voit tous les étudiants
+          etudiants = allEtudiants;
+        } else {
+          // Étudiant voit seulement son profil (correspondance par email)
+          etudiants = allEtudiants.where((etudiant) {
+            return etudiant.email.toLowerCase() == 
+                   (authProvider.currentUser ?? '').toLowerCase();
+          }).toList();
+        }
 
         if (provider.isLoading) {
           return const Center(
@@ -103,10 +118,17 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
                               color: Colors.grey,
                             ),
                           ),
-                          if (_searchQuery.isEmpty) ...[
+                          if (_searchQuery.isEmpty && Permissions.isAdmin(authProvider)) ...[
                             const SizedBox(height: 8),
                             const Text(
                               'Cliquez sur + pour ajouter un étudiant',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                          if (_searchQuery.isEmpty && !Permissions.isAdmin(authProvider)) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Votre profil étudiant apparaîtra ici',
                               style: TextStyle(color: Colors.grey),
                             ),
                           ],
@@ -176,12 +198,13 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.more_vert),
-                                  onPressed: () {
-                                    _showOptionsDialog(context, etudiant);
-                                  },
-                                ),
+                                if (Permissions.isAdmin(authProvider))
+                                  IconButton(
+                                    icon: const Icon(Icons.more_vert),
+                                    onPressed: () {
+                                      _showOptionsDialog(context, etudiant, authProvider);
+                                    },
+                                  ),
                               ],
                             ),
                           ),
@@ -195,7 +218,7 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
     );
   }
 
-  void _showOptionsDialog(BuildContext context, Etudiant etudiant) {
+  void _showOptionsDialog(BuildContext context, Etudiant etudiant, AuthProvider authProvider) {
     showDialog(
       context: context,
       builder: (context) {
@@ -215,16 +238,17 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Annuler'),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showDeleteConfirmation(context, etudiant);
-              },
-              child: const Text(
-                'Supprimer',
-                style: TextStyle(color: Colors.red),
+            if (Permissions.isAdmin(authProvider))
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showDeleteConfirmation(context, etudiant);
+                },
+                child: const Text(
+                  'Supprimer',
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
-            ),
           ],
         );
       },

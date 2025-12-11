@@ -57,8 +57,8 @@ $password = $data['password']; // Ne pas nettoyer le mot de passe
 try {
     $conn = getConnection();
     
-    // Préparer la requête
-    $stmt = $conn->prepare("SELECT id, nom, prenom, email, password FROM utilisateurs WHERE email = ?");
+    // Préparer la requête (inclure le role, par défaut 'etudiant')
+    $stmt = $conn->prepare("SELECT id, nom, prenom, email, password, COALESCE(role, 'etudiant') as role FROM utilisateurs WHERE email = ?");
     
     if (!$stmt) {
         throw new Exception("Erreur de préparation de la requête: " . $conn->error);

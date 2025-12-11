@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/salle.dart';
 import '../../providers/salle_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/custom_card.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/permissions.dart';
 import 'add_salle_page.dart';
+import '../soutenances/planifier_soutenance_page.dart';
 
 class SallesPage extends StatefulWidget {
   const SallesPage({super.key});
@@ -36,8 +39,8 @@ class _SallesPageState extends State<SallesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SalleProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<SalleProvider, AuthProvider>(
+      builder: (context, provider, authProvider, child) {
         List<Salle> filteredSalles = _showDisponiblesOnly
             ? provider.getSallesDisponibles()
             : provider.salles;
@@ -130,10 +133,17 @@ class _SallesPageState extends State<SallesPage> {
                               color: Colors.grey,
                             ),
                           ),
-                          if (_searchQuery.isEmpty) ...[
+                          if (_searchQuery.isEmpty && Permissions.isAdmin(authProvider)) ...[
                             const SizedBox(height: 8),
                             const Text(
                               'Cliquez sur + pour ajouter une salle',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                          if (_searchQuery.isEmpty && !Permissions.isAdmin(authProvider)) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Consultez les salles disponibles',
                               style: TextStyle(color: Colors.grey),
                             ),
                           ],
@@ -145,7 +155,7 @@ class _SallesPageState extends State<SallesPage> {
                       itemCount: filteredSalles.length,
                       itemBuilder: (context, index) {
                         final salle = filteredSalles[index];
-                        return _buildSalleCard(context, salle);
+                        return _buildSalleCard(context, salle, authProvider);
                       },
                     ),
             ),
@@ -155,12 +165,12 @@ class _SallesPageState extends State<SallesPage> {
     );
   }
 
-  Widget _buildSalleCard(BuildContext context, Salle salle) {
+  Widget _buildSalleCard(BuildContext context, Salle salle, AuthProvider authProvider) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: CustomCard(
         onTap: () {
-          _showSalleDetails(context, salle);
+          _showSalleDetails(context, salle, authProvider);
         },
         child: Row(
           children: [
@@ -231,7 +241,7 @@ class _SallesPageState extends State<SallesPage> {
     );
   }
 
-  void _showSalleDetails(BuildContext context, Salle salle) {
+  void _showSalleDetails(BuildContext context, Salle salle, AuthProvider authProvider) {
     showDialog(
       context: context,
       builder: (context) {
@@ -253,26 +263,34 @@ class _SallesPageState extends State<SallesPage> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Fermer'),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddSallePage(salle: salle),
-                  ),
-                );
-              },
-              child: const Text('Modifier'),
-            ),
-            if (salle.disponible)
+            // Seuls les admins peuvent modifier et planifier
+            if (Permissions.isAdmin(authProvider)) ...[
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // TODO: Planifier une soutenance dans cette salle
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddSallePage(salle: salle),
+                    ),
+                  );
                 },
-                child: const Text('Planifier'),
+                child: const Text('Modifier'),
               ),
+              if (salle.disponible)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PlanifierSoutenancePage(),
+                      ),
+                    );
+                  },
+                  child: const Text('Planifier'),
+                ),
+            ],
           ],
         );
       },

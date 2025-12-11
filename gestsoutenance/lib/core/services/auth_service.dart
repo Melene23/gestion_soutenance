@@ -15,6 +15,7 @@ class AuthService {
   String? _userNom;
   String? _userPrenom;
   String? _userId;
+  String? _userRole = 'etudiant'; // Par défaut étudiant
   String? _lastError;
 
   // Clés pour SharedPreferences
@@ -23,6 +24,7 @@ class AuthService {
   static const String _keyUserEmail = 'user_email';
   static const String _keyUserNom = 'user_nom';
   static const String _keyUserPrenom = 'user_prenom';
+  static const String _keyUserRole = 'user_role';
 
   // Initialiser depuis SharedPreferences
   Future<void> init() async {
@@ -33,6 +35,7 @@ class AuthService {
       _currentUser = prefs.getString(_keyUserEmail);
       _userNom = prefs.getString(_keyUserNom);
       _userPrenom = prefs.getString(_keyUserPrenom);
+      _userRole = prefs.getString(_keyUserRole) ?? 'etudiant';
     } catch (e) {
       debugPrint('Erreur lors de l\'initialisation: $e');
     }
@@ -99,6 +102,7 @@ class AuthService {
         _currentUser = user['email'];
         _userNom = user['nom'];
         _userPrenom = user['prenom'];
+        _userRole = user['role'] ?? 'etudiant';
 
         // Sauvegarder dans SharedPreferences
         final prefs = await SharedPreferences.getInstance();
@@ -107,6 +111,7 @@ class AuthService {
         await prefs.setString(_keyUserEmail, _currentUser!);
         await prefs.setString(_keyUserNom, _userNom!);
         await prefs.setString(_keyUserPrenom, _userPrenom!);
+        await prefs.setString(_keyUserRole, _userRole!);
 
         return true;
       } else {
@@ -190,6 +195,7 @@ class AuthService {
           _currentUser = user['email'];
           _userNom = user['nom'];
           _userPrenom = user['prenom'];
+          _userRole = user['role'] ?? 'etudiant';
 
           // Sauvegarder dans SharedPreferences
           final prefs = await SharedPreferences.getInstance();
@@ -198,6 +204,7 @@ class AuthService {
           await prefs.setString(_keyUserEmail, _currentUser!);
           await prefs.setString(_keyUserNom, _userNom!);
           await prefs.setString(_keyUserPrenom, _userPrenom!);
+          await prefs.setString(_keyUserRole, _userRole!);
 
           return true;
         } else {
@@ -232,6 +239,7 @@ class AuthService {
       _userNom = null;
       _userPrenom = null;
       _userId = null;
+      _userRole = 'etudiant';
       _lastError = null;
 
       // Supprimer de SharedPreferences
@@ -241,6 +249,7 @@ class AuthService {
       await prefs.remove(_keyUserEmail);
       await prefs.remove(_keyUserNom);
       await prefs.remove(_keyUserPrenom);
+      await prefs.remove(_keyUserRole);
     }
   }
 
@@ -249,4 +258,6 @@ class AuthService {
   String? get userNom => _userNom;
   String? get userPrenom => _userPrenom;
   String? get userId => _userId;
+  String get userRole => _userRole ?? 'etudiant';
+  bool get isAdmin => _userRole == 'admin';
 }

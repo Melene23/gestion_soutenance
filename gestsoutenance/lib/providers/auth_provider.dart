@@ -35,6 +35,8 @@ class AuthProvider extends ChangeNotifier {
   String? get userNom => _userNom;
   String? get userPrenom => _userPrenom;
   String? get lastError => _authService.lastError;
+  String get userRole => _authService.userRole;
+  bool get isAdmin => _authService.isAdmin;
 
   Future<bool> login(String email, String password) async {
     try {

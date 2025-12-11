@@ -84,7 +84,7 @@ class _SallesPageState extends State<SallesPage> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Rechercher une salle...',
-                      prefixIcon: const Icon(Icons.search_outlined),
+                      prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -192,7 +192,7 @@ class _SallesPageState extends State<SallesPage> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.people_outlined, size: 14, color: Colors.grey),
+                      const Icon(Icons.people, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
                         'Capacité: ${salle.capacite} places',

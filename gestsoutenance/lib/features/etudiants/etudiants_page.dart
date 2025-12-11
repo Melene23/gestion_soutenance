@@ -73,7 +73,7 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Rechercher un étudiant...',
-                  prefixIcon: const Icon(Icons.search_outlined),
+                  prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -177,7 +177,7 @@ class _EtudiantsPageState extends State<EtudiantsPage> {
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.more_vert_outlined),
+                                  icon: const Icon(Icons.more_vert),
                                   onPressed: () {
                                     _showOptionsDialog(context, etudiant);
                                   },

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/etudiant.dart';
-import '../core/services/api_service.dart';
+import '../core/services/database_service.dart';
 
 class EtudiantProvider with ChangeNotifier {
   List<Etudiant> _etudiants = [];
@@ -20,8 +20,8 @@ class EtudiantProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final api = ApiService();
-      _etudiants = await api.getEtudiants();
+      final database = DatabaseService();
+      _etudiants = await database.getEtudiants();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des étudiants: $e';
@@ -33,9 +33,9 @@ class EtudiantProvider with ChangeNotifier {
 
   Future<void> addEtudiant(Etudiant etudiant) async {
     try {
-      final api = ApiService();
-      final created = await api.createEtudiant(etudiant);
-      _etudiants.add(created);
+      _etudiants.add(etudiant);
+      final database = DatabaseService();
+      await database.saveEtudiants(_etudiants);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
@@ -46,11 +46,11 @@ class EtudiantProvider with ChangeNotifier {
 
   Future<void> updateEtudiant(Etudiant etudiant) async {
     try {
-      final api = ApiService();
-      final updated = await api.updateEtudiant(etudiant);
       final index = _etudiants.indexWhere((e) => e.id == etudiant.id);
       if (index != -1) {
-        _etudiants[index] = updated;
+        _etudiants[index] = etudiant;
+        final database = DatabaseService();
+        await database.saveEtudiants(_etudiants);
         notifyListeners();
       }
     } catch (e) {
@@ -62,9 +62,9 @@ class EtudiantProvider with ChangeNotifier {
 
   Future<void> deleteEtudiant(String id) async {
     try {
-      final api = ApiService();
-      await api.deleteEtudiant(id);
       _etudiants.removeWhere((e) => e.id == id);
+      final database = DatabaseService();
+      await database.saveEtudiants(_etudiants);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';

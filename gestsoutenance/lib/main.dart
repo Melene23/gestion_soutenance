@@ -1,34 +1,22 @@
-// lib/main.dart
+﻿// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+
 import 'package:gestion_soutenances/features/etudiants/add_etudiant_page.dart';
 import 'package:gestion_soutenances/features/memoires/add_memoire_page.dart';
 import 'package:gestion_soutenances/features/salles/add_salle_page.dart';
 import 'package:gestion_soutenances/features/soutenances/planifier_soutenance_page.dart';
-import 'package:gestion_soutenances/features/auth/home_page.dart';
-import 'package:gestion_soutenances/providers/metadata_provider.dart';
-import 'package:provider/provider.dart';
 import 'features/etudiants/etudiants_page.dart';
 import 'features/memoires/memoires_page.dart';
 import 'features/salles/salles_page.dart';
 import 'features/soutenances/soutenances_page.dart';
-import 'providers/auth_provider.dart';
 import 'providers/etudiant_provider.dart';
 import 'providers/memoire_provider.dart';
 import 'providers/salle_provider.dart';
 import 'providers/soutenance_provider.dart';
-import 'core/services/auth_service.dart';
 
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialiser le service d'authentification
-  final authService = AuthService();
-  await authService.init();
-  
-  // Initialiser intl pour Flutter Web (dates en français)
-  // Cela corrige les problèmes de date picker sur le web
-  
+void main() {
   runApp(const MyApp());
 }
 
@@ -39,18 +27,29 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => EtudiantProvider()),
         ChangeNotifierProvider(create: (_) => MemoireProvider()),
         ChangeNotifierProvider(create: (_) => SalleProvider()),
         ChangeNotifierProvider(create: (_) => SoutenanceProvider()),
-        ChangeNotifierProvider(create: (_) => MetadataProvider()),
       ],
       child: MaterialApp(
-        title: 'Gestion Soutenances',
+        title: 'Gestion Soutenances - ENEAM',
         theme: _buildAppTheme(),
         debugShowCheckedModeBanner: false,
-        home: const AuthWrapper(),
+        
+        // Corrigé : utilisation de la syntaxe correcte pour les délégations
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('fr', 'FR'),
+          Locale('en', 'US'),
+        ],
+        locale: const Locale('fr', 'FR'),
+        
+        home: const MainScreen(),
       ),
     );
   }
@@ -67,7 +66,7 @@ class MyApp extends StatelessWidget {
       ),
       appBarTheme: const AppBarTheme(
         elevation: 1,
-        centerTitle: true,
+        centerTitle: false, // Changé à false pour l'alignement à gauche avec icône
         backgroundColor: Colors.white,
         foregroundColor: Color(0xFF2C3E50),
         titleTextStyle: TextStyle(
@@ -78,13 +77,13 @@ class MyApp extends StatelessWidget {
         iconTheme: IconThemeData(color: Color(0xFF2C3E50)),
       ),
       scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-      cardTheme: CardThemeData(
+      cardTheme: const CardTheme(
         elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         color: Colors.white,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
@@ -168,16 +167,6 @@ class MyApp extends StatelessWidget {
         color: Color(0xFF2196F3),
         linearTrackColor: Color(0xFFE0E0E0),
       ),
-      iconTheme: const IconThemeData(
-        color: Color(0xFF2C3E50),
-        size: 24,
-        opacity: 1.0,
-      ),
-      primaryIconTheme: const IconThemeData(
-        color: Color(0xFF2196F3),
-        size: 24,
-        opacity: 1.0,
-      ),
     );
   }
 }
@@ -215,7 +204,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // Charger les données initiales
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -233,24 +221,56 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              _pageTitles[_selectedIndex],
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+            // ICÔNE CHAPEAU ENEAM - AJOUTÉ ICI
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.school, // Icône chapeau de diplômé ENEAM
+                size: 28,
+                color: Color(0xFF2196F3),
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              _getSubtitle(),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF757575),
-              ),
+            // Titre avec mention ENEAM
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'ENEAM - ',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2196F3),
+                      ),
+                    ),
+                    Text(
+                      _pageTitles[_selectedIndex],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2C3E50),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _getSubtitle(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF757575),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -281,7 +301,7 @@ class _MainScreenState extends State<MainScreen> {
     return [
       if (_selectedIndex == 0)
         _buildActionButton(
-          icon: Icons.refresh_outlined,
+          icon: Icons.refresh,
           tooltip: 'Actualiser',
           onPressed: () {
             Provider.of<EtudiantProvider>(context, listen: false).loadEtudiants();
@@ -290,27 +310,12 @@ class _MainScreenState extends State<MainScreen> {
         ),
       if (_selectedIndex == 1)
         _buildActionButton(
-          icon: Icons.filter_list_outlined,
+          icon: Icons.filter_list,
           tooltip: 'Filtrer',
           onPressed: () {
             // TODO: Implémenter le filtre
           },
         ),
-      _buildActionButton(
-        icon: Icons.logout_outlined,
-        tooltip: 'Déconnexion',
-        onPressed: () async {
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          await authProvider.logout();
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => const HomePage(),
-              ),
-            );
-          }
-        },
-      ),
       const SizedBox(width: 8),
     ];
   }
@@ -504,24 +509,6 @@ class _MainScreenState extends State<MainScreen> {
         ),
         margin: const EdgeInsets.all(16),
       ),
-    );
-  }
-}
-
-// Widget pour gérer l'authentification
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        if (authProvider.isLoggedIn) {
-          return const MainScreen();
-        } else {
-          return const HomePage();
-        }
-      },
     );
   }
 }

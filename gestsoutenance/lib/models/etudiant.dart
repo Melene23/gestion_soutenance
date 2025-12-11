@@ -1,6 +1,32 @@
 // lib/models/etudiant.dart
 import 'dart:convert';
 
+enum FiliereEneam {
+  informatiqueGestion('Informatique de gestion'),
+  planificationProjets('Planification des projets'),
+  gestionBanqueAssurance('Gestion de Banque et Assurance'),
+  gestionCommerciale('Gestion Commerciale'),
+  gestionTransportsLogistiques('Gestion des Transports & Logistiques'),
+  gestionRessourcesHumaines('Gestion des Ressources Humaines (GRH)'),
+  statistiques('Statistiques');
+
+  final String displayName;
+  const FiliereEneam(this.displayName);
+
+  static List<String> get allFiliereNames => values.map((e) => e.displayName).toList();
+}
+
+enum NiveauEneam {
+  l2('L2'),
+  l3('L3'),
+  m2('M2');
+
+  final String displayName;
+  const NiveauEneam(this.displayName);
+
+  static List<String> get allNiveauNames => values.map((e) => e.displayName).toList();
+}
+
 class Etudiant {
   final String id;
   final String nom;
@@ -9,8 +35,8 @@ class Etudiant {
   final String telephone;
   final String filiere;
   final String niveau;
-  final String encadreur;
-  final DateTime dateInscription; // AJOUTÉ
+  final String? encadreur; // <-- Rend nullable
+  final DateTime dateInscription;
 
   Etudiant({
     required this.id,
@@ -20,8 +46,8 @@ class Etudiant {
     required this.telephone,
     required this.filiere,
     required this.niveau,
-    required this.encadreur,
-    DateTime? dateInscription, // OPTIONNEL
+    this.encadreur, // <-- Rend optionnel
+    DateTime? dateInscription,
   }) : dateInscription = dateInscription ?? DateTime.now();
 
   // Getter pour nomComplet

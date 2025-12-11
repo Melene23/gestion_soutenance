@@ -1,69 +1,54 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
-// Configuration de l'API avec détection automatique de la plateforme
 class ApiConfig {
-  // URLs de base selon la plateforme
-  static const String _baseUrlWeb = 'http://127.0.0.1/gestsoutenance/api/';
-  static const String _baseUrlAndroid = 'http://10.0.2.2/gestsoutenance/api/';
-  static const String _baseUrlIOS = 'http://localhost/gestsoutenance/api/';
-  
-  // Détection automatique de la plateforme et retour de l'URL appropriée
+  // URLs de base
+  static const String _baseUrlWeb = 'http://localhost/api/';
+  static const String _baseUrlAndroid = 'http://10.0.2.2/api/';
+  static const String _baseUrlIOS = 'http://localhost/api/';
+
+  // Getter pour l'URL de base selon la plateforme
   static String get baseUrl {
     if (kIsWeb) {
-      // Flutter Web
-      debugPrint('🌐 Plateforme détectée: WEB - URL: $_baseUrlWeb');
       return _baseUrlWeb;
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      // Android (Emulator ou appareil physique)
-      debugPrint('🤖 Plateforme détectée: ANDROID - URL: $_baseUrlAndroid');
-      return _baseUrlAndroid;
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      // iOS Simulator
-      debugPrint('🍎 Plateforme détectée: iOS - URL: $_baseUrlIOS');
-      return _baseUrlIOS;
     } else {
-      // Par défaut (Windows, Linux, macOS)
-      debugPrint('💻 Plateforme détectée: ${defaultTargetPlatform} - URL: $_baseUrlWeb');
-      return _baseUrlWeb;
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          return _baseUrlAndroid;
+        case TargetPlatform.iOS:
+          return _baseUrlIOS;
+        default:
+          return _baseUrlWeb;
+      }
     }
   }
-  
-  // Pour forcer une URL spécifique (utile pour le débogage)
-  static String? _forcedBaseUrl;
-  static void setBaseUrl(String? url) {
-    _forcedBaseUrl = url;
-    if (url != null) {
-      debugPrint('🔧 URL forcée: $url');
-    } else {
-      debugPrint('🔧 URL forcée désactivée, utilisation de la détection automatique');
-    }
-  }
-  
-  // Getter qui utilise l'URL forcée si définie
-  static String get effectiveBaseUrl => _forcedBaseUrl ?? baseUrl;
-  
-  // Endpoints
-  static const String loginEndpoint = 'auth/login.php';
-  static const String registerEndpoint = 'auth/register.php';
-  static const String logoutEndpoint = 'auth/logout.php';
-  
-  // Endpoints CRUD
-  static const String etudiantsEndpoint = 'etudiants/index.php';
-  static const String memoiresEndpoint = 'memoires/index.php';
-  static const String sallesEndpoint = 'salles/index.php';
-  static const String soutenancesEndpoint = 'soutenances/index.php';
-  static const String metadataEndpoint = 'metadata/index.php';
-  
-  // Headers
-  static Map<String, String> get headers => {
-    'Content-Type': 'application/json; charset=UTF-8',
-    'Accept': 'application/json',
-  };
-  
-  // Timeout
-  static const Duration timeout = Duration(seconds: 30);
-  
-  // Méthode pour tester la connexion
-  static String get testUrl => '${effectiveBaseUrl}test.php';
-}
 
+  // Getter pour l'URL effective (alias de baseUrl)
+  static String get effectiveBaseUrl => baseUrl;
+
+  // Endpoints d'authentification
+  static String get loginEndpoint => 'auth/login.php';
+  static String get registerEndpoint => 'auth/register.php';
+
+  // Endpoints de données
+  static String get etudiantsEndpoint => 'etudiants/list.php';
+  static String get memoiresEndpoint => 'memoires/list.php';
+  static String get sallesEndpoint => 'salles/list.php';
+  static String get soutenancesEndpoint => 'soutenances/list.php';        
+  
+  // CORRECTION: Endpoints de métadonnées
+  static String get metadataEndpoint => 'metadata/list.php';  // Changé de 'stats.php' à 'list.php'
+  
+  // NOUVEAUX: Endpoints pour filières et niveaux
+  static String get filieresEndpoint => 'filieres/list.php';
+  static String get niveauxEndpoint => 'niveaux/list.php';
+
+  // Headers communs
+  static Map<String, String> get headers => {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+
+  // Timeout
+  static Duration get timeout => const Duration(seconds: 30);
+}

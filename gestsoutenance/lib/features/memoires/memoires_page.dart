@@ -102,7 +102,7 @@ class _MemoiresPageState extends State<MemoiresPage> {
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Rechercher un mémoire...',
-                      prefixIcon: const Icon(Icons.search_outlined),
+                      prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -256,7 +256,7 @@ class _MemoiresPageState extends State<MemoiresPage> {
                 if (etudiant != null)
                   Row(
                     children: [
-                      const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                      const Icon(Icons.person, size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -270,7 +270,7 @@ class _MemoiresPageState extends State<MemoiresPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.school_outlined, size: 16, color: Colors.grey),
+                    const Icon(Icons.school, size: 16, color: Colors.grey),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -284,7 +284,7 @@ class _MemoiresPageState extends State<MemoiresPage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey),
+                    const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
                       'Début: ${Helpers.formatDate(memoire.dateDebut)}',

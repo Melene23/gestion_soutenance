@@ -47,7 +47,7 @@ class MemoireDetailPage extends StatelessWidget {
         title: Text(Helpers.truncateText(memoire.theme, maxLength: 30)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit),
             onPressed: () {
               Navigator.push(
                 context,
@@ -134,7 +134,7 @@ class MemoireDetailPage extends StatelessWidget {
                       ),
                       title: Text(etudiant.nomComplet),
                       subtitle: Text('${etudiant.filiere} - ${etudiant.niveau}'),
-                      trailing: const Icon(Icons.chevron_right_outlined),
+                      trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         // Naviguer vers le détail de l'étudiant
                         // Vous devrez implémenter cette navigation

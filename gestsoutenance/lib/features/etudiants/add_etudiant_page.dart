@@ -1,9 +1,9 @@
 // lib/features/etudiants/add_etudiant_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/etudiant.dart';
 import '../../providers/etudiant_provider.dart';
-import '../../providers/metadata_provider.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/helpers.dart';
 
@@ -24,9 +24,26 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
   final _telephoneController = TextEditingController();
   final _encadreurController = TextEditingController();
   
+  // Variables pour les dropdowns
   String? _selectedFiliere;
   String? _selectedNiveau;
+  
   bool _isLoading = false;
+  final Uuid _uuid = const Uuid();
+
+  // Liste des filières ENEAM
+  final List<String> _filiereOptions = [
+    'Informatique de gestion',
+    'Planification des projets',
+    'Gestion de Banque et Assurance',
+    'Gestion Commerciale',
+    'Gestion des Transports & Logistiques',
+    'Gestion des Ressources Humaines (GRH)',
+    'Statistiques',
+  ];
+
+  // Liste des niveaux ENEAM (L2, L3, M2 seulement)
+  final List<String> _niveauOptions = ['L2', 'L3', 'M2'];
 
   @override
   void initState() {
@@ -36,9 +53,9 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
       _prenomController.text = widget.etudiant!.prenom;
       _emailController.text = widget.etudiant!.email;
       _telephoneController.text = widget.etudiant!.telephone;
+      _encadreurController.text = widget.etudiant!.encadreur ?? '';
       _selectedFiliere = widget.etudiant!.filiere;
       _selectedNiveau = widget.etudiant!.niveau;
-      _encadreurController.text = widget.etudiant!.encadreur;
     }
   }
 
@@ -54,29 +71,32 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
 
   Future<void> _saveEtudiant() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Validation des dropdowns
+    if (_selectedFiliere == null) {
+      Helpers.showSnackBar(context, 'Veuillez sélectionner une filière', isError: true);
+      return;
+    }
+    if (_selectedNiveau == null) {
+      Helpers.showSnackBar(context, 'Veuillez sélectionner un niveau', isError: true);
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
       final provider = Provider.of<EtudiantProvider>(context, listen: false);
-      if (_selectedFiliere == null || _selectedNiveau == null) {
-        Helpers.showSnackBar(
-          context,
-          'Veuillez sélectionner une filière et un niveau',
-          isError: true,
-        );
-        return;
-      }
-      
       final etudiant = Etudiant(
-        id: widget.etudiant?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id: widget.etudiant?.id ?? _uuid.v4(),
         nom: _nomController.text.trim(),
         prenom: _prenomController.text.trim(),
         email: _emailController.text.trim(),
         telephone: _telephoneController.text.trim(),
         filiere: _selectedFiliere!,
         niveau: _selectedNiveau!,
-        encadreur: _encadreurController.text.trim(),
+        encadreur: _encadreurController.text.trim().isNotEmpty 
+            ?  _encadreurController.text.trim() 
+            : null,
       );
 
       if (widget.etudiant == null) {
@@ -103,19 +123,37 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.etudiant == null 
-            ? 'Nouvel étudiant' 
-            : 'Modifier étudiant',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
+        title: Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.school,
+                size: 24,
+                color: Color(0xFF2196F3),
+              ),
+            ),
+            Text(
+              widget.etudiant == null 
+                ? 'ENEAM - Ajouter un étudiant' 
+                : 'ENEAM - Modifier étudiant',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         actions: [
           if (widget.etudiant != null)
             IconButton(
               icon: const Icon(Icons.delete_outline),
-              onPressed: _showDeleteConfirmation,
+              onPressed: () => _showDeleteConfirmation(context),
               tooltip: 'Supprimer',
             ),
         ],
@@ -143,7 +181,7 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                     children: [
                       Icon(
                         widget.etudiant == null 
-                          ? Icons.person_add 
+                          ? Icons.person_add_outlined 
                           : Icons.person_outline,
                         color: const Color(0xFF2196F3),
                         size: 24,
@@ -152,8 +190,8 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                       Expanded(
                         child: Text(
                           widget.etudiant == null
-                            ? 'Remplissez les informations de l\'étudiant'
-                            : 'Modifiez les informations de l\'étudiant',
+                            ? 'Renseignez les informations de l\'étudiant ENEAM'
+                            : 'Modifiez les informations de l\'étudiant ENEAM',
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF2C3E50),
@@ -165,49 +203,28 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Formulaire
+                // Informations personnelles
                 _buildFormSection('Informations personnelles', [
                   _buildInputField(
                     label: 'Nom *',
                     controller: _nomController,
-                    icon: Icons.account_circle_outlined,
-                    validator: (value) => Validators.validateRequired(
-                      value, 
-                      fieldName: 'Le nom'
-                    ),
+                    icon: Icons.person,
+                    validator: (value) => Validators.validateRequired(value, fieldName: 'Le nom'),
                   ),
                   const SizedBox(height: 16),
                   _buildInputField(
                     label: 'Prénom *',
                     controller: _prenomController,
                     icon: Icons.person_outline,
-                    validator: (value) => Validators.validateRequired(
-                      value, 
-                      fieldName: 'Le prénom'
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    label: 'Email *',
-                    controller: _emailController,
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: Validators.validateEmail,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    label: 'Téléphone *',
-                    controller: _telephoneController,
-                    icon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                    validator: Validators.validatePhone,
+                    validator: (value) => Validators.validateRequired(value, fieldName: 'Le prénom'),
                   ),
                 ]),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                _buildFormSection('Informations académiques', [
-                  // Liste déroulante pour Filière
+                // Informations académiques ENEAM
+                _buildFormSection('Informations académiques - ENEAM', [
+                  // Filière - DROPDOWN
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -220,56 +237,52 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Consumer<MetadataProvider>(
-                        builder: (context, metadataProvider, child) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _selectedFiliere == null 
-                                  ? const Color(0xFFE0E0E0) 
-                                  : const Color(0xFF2196F3),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _selectedFiliere == null 
+                              ? const Color(0xFFE0E0E0) 
+                              : const Color(0xFF2196F3),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedFiliere,
+                            isExpanded: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            hint: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'Sélectionnez une filière ENEAM',
+                                style: TextStyle(
+                                  color: Color(0xFF9E9E9E),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                              color: Colors.white,
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedFiliere,
-                                isExpanded: true,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                hint: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
+                            items: _filiereOptions.map((filiere) {
+                              return DropdownMenuItem<String>(
+                                value: filiere,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                   child: Text(
-                                    'Sélectionnez une filière',
-                                    style: TextStyle(
-                                      color: Color(0xFF9E9E9E),
+                                    filiere,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF2C3E50),
                                     ),
                                   ),
                                 ),
-                                items: metadataProvider.filieres.map((filiere) {
-                                  return DropdownMenuItem<String>(
-                                    value: filiere,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      child: Text(
-                                        filiere,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Color(0xFF2C3E50),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedFiliere = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedFiliere = value;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                       if (_selectedFiliere == null && _formKey.currentState?.validate() == false)
                         const Padding(
@@ -282,7 +295,8 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Liste déroulante pour Niveau
+
+                  // Niveau - DROPDOWN
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -295,56 +309,52 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Consumer<MetadataProvider>(
-                        builder: (context, metadataProvider, child) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _selectedNiveau == null 
-                                  ? const Color(0xFFE0E0E0) 
-                                  : const Color(0xFF2196F3),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _selectedNiveau == null 
+                              ? const Color(0xFFE0E0E0) 
+                              : const Color(0xFF2196F3),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedNiveau,
+                            isExpanded: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            hint: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'Sélectionnez un niveau',
+                                style: TextStyle(
+                                  color: Color(0xFF9E9E9E),
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                              color: Colors.white,
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _selectedNiveau,
-                                isExpanded: true,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                hint: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
+                            items: _niveauOptions.map((niveau) {
+                              return DropdownMenuItem<String>(
+                                value: niveau,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                   child: Text(
-                                    'Sélectionnez un niveau',
-                                    style: TextStyle(
-                                      color: Color(0xFF9E9E9E),
+                                    niveau,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF2C3E50),
                                     ),
                                   ),
                                 ),
-                                items: metadataProvider.niveaux.map((niveau) {
-                                  return DropdownMenuItem<String>(
-                                    value: niveau,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 8),
-                                      child: Text(
-                                        niveau,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          color: Color(0xFF2C3E50),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedNiveau = value;
-                                  });
-                                },
-                              ),
-                            ),
-                          );
-                        },
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedNiveau = value;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                       if (_selectedNiveau == null && _formKey.currentState?.validate() == false)
                         const Padding(
@@ -356,15 +366,32 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                         ),
                     ],
                   ),
+                ]),
+
+                const SizedBox(height: 20),
+
+                // Informations de contact et encadrement
+                _buildFormSection('Informations de contact', [
+                  _buildInputField(
+                    label: 'Email *',
+                    controller: _emailController,
+                    icon: Icons.email,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: Validators.validateEmail,
+                  ),
                   const SizedBox(height: 16),
                   _buildInputField(
-                    label: 'Encadreur *',
+                    label: 'Téléphone *',
+                    controller: _telephoneController,
+                    icon: Icons.phone,
+                    keyboardType: TextInputType.phone,
+                    validator: Validators.validatePhone,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    label: 'Encadreur (optionnel)',
                     controller: _encadreurController,
-                    icon: Icons.supervisor_account_outlined,
-                    validator: (value) => Validators.validateRequired(
-                      value, 
-                      fieldName: 'L\'encadreur'
-                    ),
+                    icon: Icons.supervisor_account,
                   ),
                 ]),
 
@@ -399,7 +426,7 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
                               Icon(
                                 widget.etudiant == null 
                                   ? Icons.add_circle_outline 
-                                  : Icons.save,
+                                  : Icons.save_outlined,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -517,7 +544,9 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
               vertical: 16,
               horizontal: 16,
             ),
-            hintText: 'Entrez $label',
+            hintText: label.contains('optionnel') 
+                ? label 
+                : 'Entrez ${label.toLowerCase().replaceAll(' *', '')}',
             hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
           ),
         ),
@@ -525,20 +554,20 @@ class _AddEtudiantPageState extends State<AddEtudiantPage> {
     );
   }
 
-  void _showDeleteConfirmation() {
+  void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.warning_amber, color: Colors.orange),
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
               SizedBox(width: 12),
               Text('Confirmation de suppression'),
             ],
           ),
           content: Text(
-            'Êtes-vous sûr de vouloir supprimer l\'étudiant "${widget.etudiant!.nomComplet}" ? Cette action est irréversible.',
+            'Êtes-vous sûr de vouloir supprimer l\'étudiant "${widget.etudiant!.nom} ${widget.etudiant!.prenom}" ? Cette action est irréversible.',
             style: const TextStyle(
               fontSize: 16,
               color: Color(0xFF616161),

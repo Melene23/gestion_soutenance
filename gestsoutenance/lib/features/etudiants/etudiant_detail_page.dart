@@ -128,7 +128,7 @@ class EtudiantDetailPage extends StatelessWidget {
               children: [
                 _buildInfoRow('Filière', etudiant.filiere),
                 _buildInfoRow('Niveau', etudiant.niveau),
-                _buildInfoRow('Encadreur', etudiant.encadreur),
+                _buildInfoRow('Encadreur', etudiant.encadreur ?? 'Non renseigné'), // CORRECTION ICI
               ],
             ),
             const SizedBox(height: 16),
@@ -371,7 +371,7 @@ class EtudiantDetailPage extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.calendar_today_outlined,
+                Icons.calendar_today,
                 size: 16,
                 color: Color(0xFF757575),
               ),
@@ -397,7 +397,7 @@ class EtudiantDetailPage extends StatelessWidget {
                   children: [
                     Text('Voir détails'),
                     SizedBox(width: 4),
-                    Icon(Icons.chevron_right_outlined, size: 16),
+                    Icon(Icons.chevron_right, size: 16),
                   ],
                 ),
               ),

@@ -1,5 +1,7 @@
 // lib/features/memoires/add_memoire_page.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/memoire.dart';
@@ -27,6 +29,8 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
   EtatMemoire _selectedEtat = EtatMemoire.enPreparation;
   DateTime? _selectedDateDebut;
   DateTime? _selectedDateSoutenance;
+  File? _selectedFile;
+  String? _fileName;
   
   bool _isLoading = false;
   final Uuid _uuid = const Uuid();
@@ -55,6 +59,46 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
     super.dispose();
   }
 
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        PlatformFile file = result.files.first;
+        
+        // Vérifier la taille du fichier (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          Helpers.showSnackBar(
+            context, 
+            'Le fichier est trop volumineux (max 10MB)', 
+            isError: true
+          );
+          return;
+        }
+
+        setState(() {
+          _selectedFile = File(file.path!);
+          _fileName = file.name;
+        });
+        
+        Helpers.showSnackBar(
+          context, 
+          'Fichier sélectionné: ${file.name}'
+        );
+      }
+    } catch (e) {
+      Helpers.showSnackBar(
+        context, 
+        'Erreur lors de la sélection du fichier: $e', 
+        isError: true
+      );
+    }
+  }
+
   Future<void> _saveMemoire() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedEtudiantId == null) {
@@ -70,6 +114,9 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
 
     try {
       final provider = Provider.of<MemoireProvider>(context, listen: false);
+      
+      // Créer le mémoire sans les champs fichier pour l'instant
+      // (Vous pouvez les ajouter plus tard quand vous modifierez le modèle)
       final memoire = Memoire(
         id: widget.memoire?.id ?? _uuid.v4(),
         etudiantId: _selectedEtudiantId!,
@@ -80,6 +127,13 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
         dateDebut: _selectedDateDebut!,
         dateSoutenance: _selectedDateSoutenance,
       );
+
+      // TODO: Ajouter la logique pour enregistrer le fichier
+      if (_selectedFile != null) {
+        print('Fichier à enregistrer: ${_selectedFile!.path}');
+        print('Nom du fichier: $_fileName');
+        // Vous pourrez ajouter cette logique plus tard
+      }
 
       if (widget.memoire == null) {
         await provider.addMemoire(memoire);
@@ -107,16 +161,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
       initialDate: _selectedDateDebut ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2196F3),
-            ),
-          ),
-          child: child!,
-        );
-      },
+      locale: const Locale('fr', 'FR'),
     );
     if (picked != null && picked != _selectedDateDebut) {
       setState(() {
@@ -131,16 +176,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
       initialDate: _selectedDateSoutenance ?? DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2196F3),
-            ),
-          ),
-          child: child!,
-        );
-      },
+      locale: const Locale('fr', 'FR'),
     );
     if (picked != null && picked != _selectedDateSoutenance) {
       setState(() {
@@ -196,7 +232,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                     children: [
                       Icon(
                         widget.memoire == null 
-                          ? Icons.bookmark_add 
+                          ? Icons.bookmark_add_outlined 
                           : Icons.book_outlined,
                         color: const Color(0xFF2196F3),
                         size: 24,
@@ -308,17 +344,95 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                   _buildInputField(
                     label: 'Thème du mémoire *',
                     controller: _themeController,
-                    icon: Icons.text_fields,
+                    icon: Icons.title,
                     validator: (value) => Validators.validateRequired(
                       value, 
                       fieldName: 'Le thème'
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
+                  // Fichier du mémoire (PDF/Word) - OPTIONNEL
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Fichier du mémoire (PDF/Word) - Optionnel',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF616161),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: _pickFile,
+                        child: Container(
+                          height: 56,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _selectedFile == null 
+                                ? const Color(0xFFE0E0E0) 
+                                : const Color(0xFF4CAF50),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _selectedFile == null 
+                                  ? Icons.attach_file 
+                                  : Icons.check_circle,
+                                color: _selectedFile == null 
+                                  ? const Color(0xFF757575) 
+                                  : const Color(0xFF4CAF50),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _fileName ?? 'Sélectionner un fichier (PDF, Word)',
+                                  style: TextStyle(
+                                    color: _selectedFile == null 
+                                      ? const Color(0xFF9E9E9E) 
+                                      : const Color(0xFF2C3E50),
+                                  ),
+                                ),
+                              ),
+                              if (_selectedFile != null)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedFile = null;
+                                      _fileName = null;
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (_selectedFile != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Fichier sélectionné: $_fileName',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF4CAF50),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
                   _buildInputField(
                     label: 'Description *',
                     controller: _descriptionController,
-                    icon: Icons.description_outlined,
+                    icon: Icons.description,
                     maxLines: 4,
                     minLines: 3,
                     validator: (value) => Validators.validateRequired(
@@ -327,10 +441,11 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  
                   _buildInputField(
                     label: 'Encadreur *',
                     controller: _encadreurController,
-                    icon: Icons.supervisor_account_outlined,
+                    icon: Icons.supervisor_account,
                     validator: (value) => Validators.validateRequired(
                       value, 
                       fieldName: 'L\'encadreur'
@@ -438,7 +553,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.calendar_today_outlined,
+                                Icons.calendar_today,
                                 color: Color(0xFF757575),
                               ),
                               const SizedBox(width: 12),
@@ -456,7 +571,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                               ),
                               if (_selectedDateDebut != null)
                                 IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
+                                  icon: const Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     setState(() {
                                       _selectedDateDebut = null;
@@ -501,7 +616,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.calendar_today_outlined,
+                                Icons.calendar_today,
                                 color: Color(0xFF757575),
                               ),
                               const SizedBox(width: 12),
@@ -519,7 +634,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                               ),
                               if (_selectedDateSoutenance != null)
                                 IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
+                                  icon: const Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     setState(() {
                                       _selectedDateSoutenance = null;
@@ -565,7 +680,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                               Icon(
                                 widget.memoire == null 
                                   ? Icons.add_circle_outline 
-                                  : Icons.save,
+                                  : Icons.save_outlined,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -697,7 +812,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.warning_amber, color: Colors.orange),
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
               SizedBox(width: 12),
               Text('Confirmation de suppression'),
             ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/soutenance.dart';
-import '../core/services/api_service.dart';
+import '../core/services/database_service.dart';
 
 class SoutenanceProvider with ChangeNotifier {
   List<Soutenance> _soutenances = [];
@@ -20,8 +20,8 @@ class SoutenanceProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final api = ApiService();
-      _soutenances = await api.getSoutenances();
+      final database = DatabaseService();
+      _soutenances = await database.getSoutenances();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des soutenances: $e';
@@ -33,9 +33,9 @@ class SoutenanceProvider with ChangeNotifier {
 
   Future<void> addSoutenance(Soutenance soutenance) async {
     try {
-      final api = ApiService();
-      final created = await api.createSoutenance(soutenance);
-      _soutenances.add(created);
+      _soutenances.add(soutenance);
+      final database = DatabaseService();
+      await database.saveSoutenances(_soutenances);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
@@ -46,11 +46,11 @@ class SoutenanceProvider with ChangeNotifier {
 
   Future<void> updateSoutenance(Soutenance soutenance) async {
     try {
-      final api = ApiService();
-      final updated = await api.updateSoutenance(soutenance);
       final index = _soutenances.indexWhere((s) => s.id == soutenance.id);
       if (index != -1) {
-        _soutenances[index] = updated;
+        _soutenances[index] = soutenance;
+        final database = DatabaseService();
+        await database.saveSoutenances(_soutenances);
         notifyListeners();
       }
     } catch (e) {
@@ -62,9 +62,9 @@ class SoutenanceProvider with ChangeNotifier {
 
   Future<void> deleteSoutenance(String id) async {
     try {
-      final api = ApiService();
-      await api.deleteSoutenance(id);
       _soutenances.removeWhere((s) => s.id == id);
+      final database = DatabaseService();
+      await database.saveSoutenances(_soutenances);
       notifyListeners();
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';

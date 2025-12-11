@@ -77,13 +77,13 @@ class MyApp extends StatelessWidget {
         iconTheme: IconThemeData(color: Color(0xFF2C3E50)),
       ),
       scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-      cardTheme: const CardTheme(
+      cardTheme: CardThemeData(
         elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         color: Colors.white,
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(

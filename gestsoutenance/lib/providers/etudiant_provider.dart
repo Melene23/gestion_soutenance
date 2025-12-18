@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/etudiant.dart';
-import '../core/services/database_service.dart';
+import '../core/services/api_service.dart'; // ← IMPORTANT : Utiliser ApiService, pas DatabaseService
 
 class EtudiantProvider with ChangeNotifier {
   List<Etudiant> _etudiants = [];
@@ -20,11 +20,14 @@ class EtudiantProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final database = DatabaseService();
-      _etudiants = await database.getEtudiants();
+      // ✅ CORRECTION : Utiliser ApiService pour charger depuis MySQL
+      final apiService = ApiService();
+      _etudiants = await apiService.getEtudiants();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des étudiants: $e';
+      // En cas d'erreur, on garde la liste vide plutôt que de planter
+      _etudiants = [];
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -32,49 +35,75 @@ class EtudiantProvider with ChangeNotifier {
   }
 
   Future<void> addEtudiant(Etudiant etudiant) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
-      _etudiants.add(etudiant);
-      final database = DatabaseService();
-      await database.saveEtudiants(_etudiants);
-      notifyListeners();
+      // ✅ CORRECTION : Utiliser ApiService pour envoyer à MySQL
+      final apiService = ApiService();
+      final createdEtudiant = await apiService.createEtudiant(etudiant);
+      
+      // Ajouter l'étudiant créé (avec les données du serveur)
+      _etudiants.add(createdEtudiant);
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> updateEtudiant(Etudiant etudiant) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
+      // ✅ CORRECTION : Utiliser ApiService pour mettre à jour dans MySQL
+      final apiService = ApiService();
+      final updatedEtudiant = await apiService.updateEtudiant(etudiant);
+      
       final index = _etudiants.indexWhere((e) => e.id == etudiant.id);
       if (index != -1) {
-        _etudiants[index] = etudiant;
-        final database = DatabaseService();
-        await database.saveEtudiants(_etudiants);
-        notifyListeners();
+        _etudiants[index] = updatedEtudiant;
       }
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de la modification: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> deleteEtudiant(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
+      // ✅ CORRECTION : Utiliser ApiService pour supprimer de MySQL
+      final apiService = ApiService();
+      await apiService.deleteEtudiant(id);
+      
       _etudiants.removeWhere((e) => e.id == id);
-      final database = DatabaseService();
-      await database.saveEtudiants(_etudiants);
-      notifyListeners();
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Etudiant? getEtudiantById(String id) {
-    return _etudiants.firstWhere((e) => e.id == id);
+    try {
+      return _etudiants.firstWhere((e) => e.id == id);
+    } catch (e) {
+      return null; // Retourne null si non trouvé
+    }
   }
 
   List<Etudiant> searchEtudiants(String query) {
@@ -87,5 +116,16 @@ class EtudiantProvider with ChangeNotifier {
              etudiant.email.toLowerCase().contains(searchLower) ||
              etudiant.filiere.toLowerCase().contains(searchLower);
     }).toList();
+  }
+
+  // Méthode pour vider les erreurs
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // Méthode pour rafraîchir les données
+  Future<void> refresh() async {
+    await loadEtudiants();
   }
 }

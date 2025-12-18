@@ -31,13 +31,18 @@ class ApiConfig {
   static String get registerEndpoint => 'auth/register.php';
 
   // Endpoints de données
-  static String get etudiantsEndpoint => 'etudiants/list.php';
-  static String get memoiresEndpoint => 'memoires/list.php';
-  static String get sallesEndpoint => 'salles/list.php';
-  static String get soutenancesEndpoint => 'soutenances/list.php';        
+  static String get etudiantsEndpoint => 'etudiants/index.php';
+  static String get memoiresEndpoint => 'memoires/index.php';
+  static String get sallesEndpoint => 'salles/index.php';
+  static String get soutenancesEndpoint => 'soutenances/index.php';       
+
+   static String get addEtudiantEndpoint => 'etudiants/add.php';
+  static String get addMemoireEndpoint => 'memoires/add.php';
+  static String get addSalleEndpoint => 'salles/add.php';
+  static String get addSoutenanceEndpoint => 'soutenances/add.php'; 
   
   // CORRECTION: Endpoints de métadonnées
-  static String get metadataEndpoint => 'metadata/list.php';  // Changé de 'stats.php' à 'list.php'
+  static String get metadataEndpoint => 'metadata/index.php';  // Changé de 'stats.php' à 'list.php'
   
   // NOUVEAUX: Endpoints pour filières et niveaux
   static String get filieresEndpoint => 'filieres/list.php';

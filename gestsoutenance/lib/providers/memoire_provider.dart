@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/memoire.dart';
-import '../core/services/database_service.dart';
+import '../core/services/api_service.dart'; // ← CHANGÉ : ApiService au lieu de DatabaseService
 
 class MemoireProvider with ChangeNotifier {
   List<Memoire> _memoires = [];
@@ -20,12 +20,15 @@ class MemoireProvider with ChangeNotifier {
     notifyListeners();
     
     try {
-      final database = DatabaseService();
-      _memoires = await database.getMemoires();
+      // ✅ CORRECTION : Utiliser ApiService pour charger depuis MySQL
+      final apiService = ApiService();
+      _memoires = await apiService.getMemoires();
       _error = null;
     } catch (e) {
       _error = 'Erreur lors du chargement des mémoires: $e';
-      print('Erreur loadMemoires: $e'); // Debug
+      print('Erreur loadMemoires: $e');
+      // En cas d'erreur, garder liste vide
+      _memoires = [];
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -33,44 +36,65 @@ class MemoireProvider with ChangeNotifier {
   }
 
   Future<void> addMemoire(Memoire memoire) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
-      _memoires.add(memoire);
-      final database = DatabaseService();
-      await database.saveMemoires(_memoires);
-      notifyListeners();
+      // ✅ CORRECTION : Utiliser ApiService pour envoyer à MySQL
+      final apiService = ApiService();
+      final createdMemoire = await apiService.createMemoire(memoire);
+      
+      _memoires.add(createdMemoire);
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de l\'ajout: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> updateMemoire(Memoire memoire) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
+      // ✅ CORRECTION : Utiliser ApiService pour mettre à jour dans MySQL
+      final apiService = ApiService();
+      final updatedMemoire = await apiService.updateMemoire(memoire);
+      
       final index = _memoires.indexWhere((m) => m.id == memoire.id);
       if (index != -1) {
-        _memoires[index] = memoire;
-        final database = DatabaseService();
-        await database.saveMemoires(_memoires);
-        notifyListeners();
+        _memoires[index] = updatedMemoire;
       }
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de la modification: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> deleteMemoire(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    
     try {
+      // ✅ CORRECTION : Utiliser ApiService pour supprimer de MySQL
+      final apiService = ApiService();
+      await apiService.deleteMemoire(id);
+      
       _memoires.removeWhere((m) => m.id == id);
-      final database = DatabaseService();
-      await database.saveMemoires(_memoires);
-      notifyListeners();
+      _error = null;
     } catch (e) {
       _error = 'Erreur lors de la suppression: $e';
-      notifyListeners();
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -79,15 +103,13 @@ class MemoireProvider with ChangeNotifier {
     try {
       return _memoires.firstWhere((m) => m.id == id);
     } catch (e) {
-      return null; // Retourne null si non trouvé
+      return null;
     }
   }
 
-  // NOUVELLE MÉTHODE : Pour obtenir les mémoires disponibles pour soutenance
+  // Pour obtenir les mémoires disponibles pour soutenance
   List<Memoire> getMemoiresDisponiblesPourSoutenance({String? excludeId}) {
     return _memoires.where((m) {
-      // Inclure tous les mémoires sauf ceux déjà validés
-      // ou inclure celui en cours d'édition (excludeId)
       return m.etat != EtatMemoire.valide || 
              (excludeId != null && m.id == excludeId);
     }).toList();
@@ -106,8 +128,26 @@ class MemoireProvider with ChangeNotifier {
     return _memoires.where((m) => m.etudiantId == etudiantId).toList();
   }
   
-  // NOUVELLE MÉTHODE : Vérifier si un mémoire existe
+  // Vérifier si un mémoire existe
   bool hasMemoire(String id) {
     return _memoires.any((m) => m.id == id);
+  }
+
+  // ✅ NOUVELLES MÉTHODES AJOUTÉES :
+  
+  // Méthode pour vider les erreurs
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // Méthode pour rafraîchir les données
+  Future<void> refresh() async {
+    await loadMemoires();
+  }
+
+  // Méthode pour filtrer par état (version améliorée)
+  List<Memoire> filterByEtat(EtatMemoire etat) {
+    return _memoires.where((m) => m.etat == etat).toList();
   }
 }

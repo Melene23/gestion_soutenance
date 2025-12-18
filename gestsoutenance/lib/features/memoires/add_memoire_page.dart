@@ -27,12 +27,11 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
   
   String? _selectedEtudiantId;
   EtatMemoire _selectedEtat = EtatMemoire.enPreparation;
-  DateTime? _selectedDateDebut;
-  DateTime? _selectedDateSoutenance;
   File? _selectedFile;
   String? _fileName;
   
   bool _isLoading = false;
+  bool _filePickerError = false;
   final Uuid _uuid = const Uuid();
 
   @override
@@ -44,10 +43,9 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
       _encadreurController.text = widget.memoire!.encadreur;
       _selectedEtudiantId = widget.memoire!.etudiantId;
       _selectedEtat = widget.memoire!.etat;
-      _selectedDateDebut = widget.memoire!.dateDebut;
-      _selectedDateSoutenance = widget.memoire!.dateSoutenance;
-    } else {
-      _selectedDateDebut = DateTime.now();
+      if (widget.memoire!.fileName != null) {
+        _fileName = widget.memoire!.fileName;
+      }
     }
   }
 
@@ -61,17 +59,29 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
 
   Future<void> _pickFile() async {
     try {
+      _filePickerError = false;
+      debugPrint('🔄 Début de la sélection de fichier...');
+      
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'rtf'],
         allowMultiple: false,
+        dialogTitle: 'Sélectionnez un fichier',
+        lockParentWindow: true,
       );
 
+      debugPrint('📁 Résultat FilePicker: $result');
+      
       if (result != null && result.files.isNotEmpty) {
         PlatformFile file = result.files.first;
+        debugPrint('📄 Fichier sélectionné: ${file.name}');
+        debugPrint('📏 Taille: ${file.size} bytes');
+        debugPrint('📍 Chemin: ${file.path}');
         
-        // Vérifier la taille du fichier (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        // Vérifier la taille du fichier (max 10MB) - CORRECTION : 10MB = 10 * 1024 * 1024
+        const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+        if (file.size > maxSize) {
+          debugPrint('⚠️ Fichier trop volumineux: ${file.size} > $maxSize');
           Helpers.showSnackBar(
             context, 
             'Le fichier est trop volumineux (max 10MB)', 
@@ -80,34 +90,72 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
           return;
         }
 
+        // Vérifier si le fichier est accessible
+        if (file.path == null) {
+          debugPrint('❌ Chemin du fichier null');
+          Helpers.showSnackBar(
+            context, 
+            'Impossible d\'accéder au fichier', 
+            isError: true
+          );
+          return;
+        }
+
         setState(() {
           _selectedFile = File(file.path!);
           _fileName = file.name;
+          _filePickerError = false;
         });
+        
+        debugPrint('✅ Fichier enregistré dans l\'état');
         
         Helpers.showSnackBar(
           context, 
           'Fichier sélectionné: ${file.name}'
         );
+      } else {
+        debugPrint('ℹ️ Aucun fichier sélectionné (utilisateur a annulé)');
       }
     } catch (e) {
+      debugPrint('❌ ERREUR FilePicker: $e');
+      _filePickerError = true;
+      
+      // Message d'erreur adapté
+      String errorMessage = 'Erreur lors de la sélection du fichier';
+      if (e.toString().contains('permission')) {
+        errorMessage = 'Permission refusée. Vérifiez les autorisations de l\'app';
+      } else if (e.toString().contains('storage')) {
+        errorMessage = 'Accès au stockage impossible';
+      }
+      
       Helpers.showSnackBar(
         context, 
-        'Erreur lors de la sélection du fichier: $e', 
+        '$errorMessage: ${e.toString().split(':').first}', 
         isError: true
       );
     }
   }
 
   Future<void> _saveMemoire() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('❌ Validation du formulaire échouée');
+      return;
+    }
+    
     if (_selectedEtudiantId == null) {
       Helpers.showSnackBar(context, 'Veuillez sélectionner un étudiant', isError: true);
       return;
     }
-    if (_selectedDateDebut == null) {
-      Helpers.showSnackBar(context, 'Veuillez sélectionner une date de début', isError: true);
-      return;
+    
+    // MODIFICATION : Le fichier est maintenant OPTIONNEL
+    // On continue même si _selectedFile == null
+    
+    if (_filePickerError) {
+      Helpers.showSnackBar(
+        context, 
+        'Problème avec le sélecteur de fichier. Le fichier ne sera pas sauvegardé.',
+        isError: false // Warning, pas erreur
+      );
     }
 
     setState(() => _isLoading = true);
@@ -115,8 +163,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
     try {
       final provider = Provider.of<MemoireProvider>(context, listen: false);
       
-      // Créer le mémoire sans les champs fichier pour l'instant
-      // (Vous pouvez les ajouter plus tard quand vous modifierez le modèle)
+      // Créer le mémoire (fichier optionnel)
       final memoire = Memoire(
         id: widget.memoire?.id ?? _uuid.v4(),
         etudiantId: _selectedEtudiantId!,
@@ -124,16 +171,18 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
         description: _descriptionController.text.trim(),
         encadreur: _encadreurController.text.trim(),
         etat: _selectedEtat,
-        dateDebut: _selectedDateDebut!,
-        dateSoutenance: _selectedDateSoutenance,
+        dateDebut: DateTime.now(),
+        // Fichier optionnel - seulement si disponible
+        fichierPath: _selectedFile?.path ?? widget.memoire?.fichierPath,
+        fileName: _fileName ?? widget.memoire?.fileName,
       );
 
-      // TODO: Ajouter la logique pour enregistrer le fichier
-      if (_selectedFile != null) {
-        print('Fichier à enregistrer: ${_selectedFile!.path}');
-        print('Nom du fichier: $_fileName');
-        // Vous pourrez ajouter cette logique plus tard
-      }
+      // Log pour debug
+      debugPrint('💾 Sauvegarde du mémoire:');
+      debugPrint('  Thème: ${memoire.theme}');
+      debugPrint('  Étudiant ID: ${memoire.etudiantId}');
+      debugPrint('  Fichier: ${memoire.fileName ?? "Aucun"}');
+      debugPrint('  Chemin fichier: ${memoire.fichierPath ?? "Aucun"}');
 
       if (widget.memoire == null) {
         await provider.addMemoire(memoire);
@@ -145,43 +194,14 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
 
       Navigator.pop(context);
     } catch (e) {
+      debugPrint('❌ ERREUR lors de la sauvegarde: $e');
       Helpers.showSnackBar(
         context,
-        'Erreur: $e',
+        'Erreur: ${e.toString().split(':').first}',
         isError: true,
       );
     } finally {
       setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _selectDateDebut(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateDebut ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'),
-    );
-    if (picked != null && picked != _selectedDateDebut) {
-      setState(() {
-        _selectedDateDebut = picked;
-      });
-    }
-  }
-
-  Future<void> _selectDateSoutenance(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDateSoutenance ?? DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      locale: const Locale('fr', 'FR'),
-    );
-    if (picked != null && picked != _selectedDateSoutenance) {
-      setState(() {
-        _selectedDateSoutenance = picked;
-      });
     }
   }
 
@@ -352,7 +372,7 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Fichier du mémoire (PDF/Word) - OPTIONNEL
+                  // MODIFICATION : Fichier OPTIONNEL
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -372,9 +392,11 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: _selectedFile == null 
-                                ? const Color(0xFFE0E0E0) 
-                                : const Color(0xFF4CAF50),
+                              color: _filePickerError
+                                ? Colors.orange // Orange pour avertissement
+                                : (_selectedFile == null 
+                                    ? const Color(0xFFE0E0E0) // Gris normal
+                                    : const Color(0xFF4CAF50)), // Vert si fichier
                             ),
                             borderRadius: BorderRadius.circular(12),
                             color: Colors.white,
@@ -382,31 +404,40 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                           child: Row(
                             children: [
                               Icon(
-                                _selectedFile == null 
-                                  ? Icons.attach_file 
-                                  : Icons.check_circle,
-                                color: _selectedFile == null 
-                                  ? const Color(0xFF757575) 
-                                  : const Color(0xFF4CAF50),
+                                _filePickerError
+                                  ? Icons.warning // Icône avertissement
+                                  : (_selectedFile == null 
+                                      ? Icons.attach_file 
+                                      : Icons.check_circle),
+                                color: _filePickerError
+                                  ? Colors.orange
+                                  : (_selectedFile == null 
+                                      ? const Color(0xFF757575) 
+                                      : const Color(0xFF4CAF50)),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  _fileName ?? 'Sélectionner un fichier (PDF, Word)',
+                                  _fileName ?? 
+                                  widget.memoire?.fileName ?? 
+                                  'Sélectionner un fichier (PDF, Word) - Optionnel',
                                   style: TextStyle(
-                                    color: _selectedFile == null 
-                                      ? const Color(0xFF9E9E9E) 
-                                      : const Color(0xFF2C3E50),
+                                    color: _filePickerError
+                                      ? Colors.orange
+                                      : (_selectedFile == null 
+                                          ? const Color(0xFF9E9E9E) 
+                                          : const Color(0xFF2C3E50)),
                                   ),
                                 ),
                               ),
-                              if (_selectedFile != null)
+                              if (_selectedFile != null || widget.memoire?.fileName != null)
                                 IconButton(
                                   icon: const Icon(Icons.clear, size: 18),
                                   onPressed: () {
                                     setState(() {
                                       _selectedFile = null;
                                       _fileName = null;
+                                      _filePickerError = false;
                                     });
                                   },
                                 ),
@@ -414,17 +445,58 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                           ),
                         ),
                       ),
+                      // Messages d'information
+                      if (_filePickerError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline, size: 12, color: Colors.orange),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Problème avec le sélecteur de fichiers',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       if (_selectedFile != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            'Fichier sélectionné: $_fileName',
+                            'Fichier prêt: $_fileName',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Color(0xFF4CAF50),
                             ),
                           ),
                         ),
+                      if (widget.memoire?.fileName != null && _selectedFile == null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Fichier actuel: ${widget.memoire!.fileName}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF2196F3),
+                            ),
+                          ),
+                        ),
+                      // Note sur la taille
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Max 10MB - PDF, DOC, DOCX, TXT',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -519,135 +591,6 @@ class _AddMemoirePageState extends State<AddMemoirePage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-
-                // Dates
-                _buildFormSection('Dates', [
-                  // Date de début
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Date de début *',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF616161),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () => _selectDateDebut(context),
-                        child: Container(
-                          height: 56,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _selectedDateDebut == null 
-                                ? const Color(0xFFE0E0E0) 
-                                : const Color(0xFF2196F3),
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                color: Color(0xFF757575),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _selectedDateDebut != null
-                                      ? Helpers.formatDate(_selectedDateDebut!)
-                                      : 'Sélectionner une date',
-                                  style: TextStyle(
-                                    color: _selectedDateDebut == null 
-                                      ? const Color(0xFF9E9E9E) 
-                                      : const Color(0xFF2C3E50),
-                                  ),
-                                ),
-                              ),
-                              if (_selectedDateDebut != null)
-                                IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedDateDebut = null;
-                                    });
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Date de soutenance (optionnel)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Date de soutenance (optionnel)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF616161),
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () => _selectDateSoutenance(context),
-                        child: Container(
-                          height: 56,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: _selectedDateSoutenance == null 
-                                ? const Color(0xFFE0E0E0) 
-                                : const Color(0xFF2196F3),
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Colors.white,
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                color: Color(0xFF757575),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _selectedDateSoutenance != null
-                                      ? Helpers.formatDate(_selectedDateSoutenance!)
-                                      : 'Sélectionner une date',
-                                  style: TextStyle(
-                                    color: _selectedDateSoutenance == null 
-                                      ? const Color(0xFF9E9E9E) 
-                                      : const Color(0xFF2C3E50),
-                                  ),
-                                ),
-                              ),
-                              if (_selectedDateSoutenance != null)
-                                IconButton(
-                                  icon: const Icon(Icons.clear, size: 18),
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedDateSoutenance = null;
-                                    });
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ]),
 
                 const SizedBox(height: 32),
 

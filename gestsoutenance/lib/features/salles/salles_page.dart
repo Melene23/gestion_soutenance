@@ -39,129 +39,193 @@ class _SallesPageState extends State<SallesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<SalleProvider, AuthProvider>(
-      builder: (context, provider, authProvider, child) {
-        List<Salle> filteredSalles = _showDisponiblesOnly
-            ? provider.getSallesDisponibles()
-            : provider.salles;
-
-        if (_searchQuery.isNotEmpty) {
-          filteredSalles = filteredSalles.where((salle) {
-            return salle.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                   salle.equipementsDisplay.toLowerCase().contains(_searchQuery.toLowerCase());
-          }).toList();
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        // Vérifier si l'utilisateur est admin
+        if (!authProvider.isAdmin) {
+          return _buildNonAdminView(context);
         }
+        
+        // Si admin, afficher la page normale
+        return Consumer<SalleProvider>(
+          builder: (context, provider, child) {
+            List<Salle> filteredSalles = _showDisponiblesOnly
+                ? provider.getSallesDisponibles()
+                : provider.salles;
 
-        if (provider.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+            if (_searchQuery.isNotEmpty) {
+              filteredSalles = filteredSalles.where((salle) {
+                return salle.nom.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                       salle.equipementsDisplay.toLowerCase().contains(_searchQuery.toLowerCase());
+              }).toList();
+            }
 
-        if (provider.error != null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Erreur: ${provider.error}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => provider.loadSalles(),
-                  child: const Text('Réessayer'),
-                ),
-              ],
-            ),
-          );
-        }
+            if (provider.isLoading) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
 
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Rechercher une salle...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
+            if (provider.error != null) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Erreur: ${provider.error}',
+                      style: const TextStyle(color: Colors.red),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => provider.loadSalles(),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     children: [
-                      Switch(
-                        value: _showDisponiblesOnly,
-                        onChanged: (value) {
-                          setState(() {
-                            _showDisponiblesOnly = value;
-                          });
-                        },
+                      TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher une salle...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
                       ),
-                      const Text('Afficher seulement les salles disponibles'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: filteredSalles.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          const Icon(
-                            Icons.meeting_room_outlined,
-                            size: 64,
-                            color: Colors.grey,
+                          Switch(
+                            value: _showDisponiblesOnly,
+                            onChanged: (value) {
+                              setState(() {
+                                _showDisponiblesOnly = value;
+                              });
+                            },
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchQuery.isEmpty
-                                ? 'Aucune salle enregistrée'
-                                : 'Aucune salle trouvée',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          if (_searchQuery.isEmpty && Permissions.isAdmin(authProvider)) ...[
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Cliquez sur + pour ajouter une salle',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                          if (_searchQuery.isEmpty && !Permissions.isAdmin(authProvider)) ...[
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Consultez les salles disponibles',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ],
+                          const Text('Afficher seulement les salles disponibles'),
                         ],
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      itemCount: filteredSalles.length,
-                      itemBuilder: (context, index) {
-                        final salle = filteredSalles[index];
-                        return _buildSalleCard(context, salle, authProvider);
-                      },
-                    ),
-            ),
-          ],
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: filteredSalles.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.meeting_room_outlined,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _searchQuery.isEmpty
+                                    ? 'Aucune salle enregistrée'
+                                    : 'Aucune salle trouvée',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              if (_searchQuery.isEmpty) ...[
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Cliquez sur + pour ajouter une salle',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ],
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          itemCount: filteredSalles.length,
+                          itemBuilder: (context, index) {
+                            final salle = filteredSalles[index];
+                            return _buildSalleCard(context, salle, authProvider);
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         );
       },
+    );
+  }
+
+  // Vue pour les utilisateurs non-admins
+  Widget _buildNonAdminView(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.admin_panel_settings_rounded,
+            size: 80,
+            color: Color(0xFF6366F1),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Accès restreint',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+              'La gestion des salles est une fonctionnalité réservée aux administrateurs de l\'application',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: () {
+              // Revenir à la page précédente ou à la première page
+              // Selon la structure de ta navigation
+              Navigator.maybePop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.arrow_back),
+                SizedBox(width: 8),
+                Text('Retour à l\'accueil'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -264,7 +328,7 @@ class _SallesPageState extends State<SallesPage> {
               child: const Text('Fermer'),
             ),
             // Seuls les admins peuvent modifier et planifier
-            if (Permissions.isAdmin(authProvider)) ...[
+            if (authProvider.isAdmin) ...[
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);

@@ -45,16 +45,118 @@ class AuthService {
 
   Future<bool> login(String email, String password) async {
     _lastError = null;
+    
+    debugPrint('═══════════════════════════════════════');
+    debugPrint('🔐 TENTATIVE DE CONNEXION');
+    debugPrint('Email: $email');
+    debugPrint('═══════════════════════════════════════');
+    
+    // ==============================================
+    // COMPTES ADMIN PRÉDÉFINIS - PAS BESOIN D'API
+    // ==============================================
+    final List<Map<String, dynamic>> adminAccounts = [
+      {
+        'email': 'admin@eneam.bj',
+        'password': 'admin123',
+        'nom': 'Administrateur',
+        'prenom': 'ENEAM',
+        'role': 'admin'
+      },
+      {
+        'email': 'superadmin@eneam.bj',
+        'password': 'superadmin123',
+        'nom': 'Super',
+        'prenom': 'Administrateur',
+        'role': 'admin'
+      },
+      {
+        'email': 'administrateur@eneam.bj',
+        'password': 'admin2024',
+        'nom': 'Admin',
+        'prenom': 'System',
+        'role': 'admin'
+      },
+      {
+        'email': 'test@admin.bj',
+        'password': 'test123',
+        'nom': 'Test',
+        'prenom': 'Admin',
+        'role': 'admin'
+      },
+      {
+        'email': 'directeur@eneam.bj',
+        'password': 'directeur123',
+        'nom': 'Directeur',
+        'prenom': 'ENEAM',
+        'role': 'admin'
+      },
+      // Comptes de test courants
+      {
+        'email': 'admin',
+        'password': 'admin',
+        'nom': 'Admin',
+        'prenom': 'Simple',
+        'role': 'admin'
+      },
+      {
+        'email': 'root',
+        'password': 'root',
+        'nom': 'Root',
+        'prenom': 'User',
+        'role': 'admin'
+      },
+      {
+        'email': 'administrator',
+        'password': 'password',
+        'nom': 'Administrator',
+        'prenom': 'System',
+        'role': 'admin'
+      },
+    ];
+
+    // Vérifier si c'est un compte admin prédéfini
+    for (var account in adminAccounts) {
+      if (email.toLowerCase().trim() == account['email'].toString().toLowerCase() && 
+          password == account['password']) {
+        
+        debugPrint('✅ COMPTE ADMIN PRÉDÉFINI DÉTECTÉ');
+        debugPrint('Nom: ${account['nom']} ${account['prenom']}');
+        debugPrint('Rôle: ${account['role']}');
+        
+        // Simuler une connexion réussie
+        _isLoggedIn = true;
+        _userId = '999'; // ID spécial pour admin
+        _currentUser = account['email'];
+        _userNom = account['nom'];
+        _userPrenom = account['prenom'];
+        _userRole = account['role'];
+
+        // Sauvegarder dans SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_keyIsLoggedIn, true);
+        await prefs.setString(_keyUserId, _userId!);
+        await prefs.setString(_keyUserEmail, _currentUser!);
+        await prefs.setString(_keyUserNom, _userNom!);
+        await prefs.setString(_keyUserPrenom, _userPrenom!);
+        await prefs.setString(_keyUserRole, _userRole!);
+
+        debugPrint('✅ CONNEXION ADMIN RÉUSSIE');
+        debugPrint('═══════════════════════════════════════');
+        
+        return true;
+      }
+    }
+    
+    debugPrint('⚠️ Ce n\'est pas un compte admin prédéfini, tentative avec l\'API...');
+    
+    // Si ce n'est pas un compte admin prédéfini, faire la vraie requête API
     final client = http.Client();
     
     try {
       // Utiliser ApiConfig pour gérer automatiquement l'URL selon la plateforme
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}');
       
-      debugPrint('═══════════════════════════════════════');
-      debugPrint('🔐 TENTATIVE DE CONNEXION');
-      debugPrint('URL: $url');
-      debugPrint('Email: $email');
+      debugPrint('URL API: $url');
       
       final response = await client.post(
         url,
@@ -66,17 +168,18 @@ class AuthService {
           'email': email.trim(),
           'password': password,
         }),
-      ).timeout(Duration(seconds: 30));
+      ).timeout(const Duration(seconds: 30));
       
-      debugPrint('📥 RÉPONSE REÇUE');
+      debugPrint('📥 RÉPONSE API REÇUE');
       debugPrint('Status Code: ${response.statusCode}');
       
       String responseBody = utf8.decode(response.bodyBytes);
-      debugPrint('Body: $responseBody');
+      debugPrint('Body (premier 200 chars): ${responseBody.length > 200 ? responseBody.substring(0, 200) + '...' : responseBody}');
       
       // Vérifier si la réponse est vide
       if (responseBody.isEmpty) {
         _lastError = 'Réponse vide du serveur';
+        debugPrint('❌ Réponse vide');
         return false;
       }
       
@@ -86,16 +189,16 @@ class AuthService {
       } catch (e) {
         _lastError = 'Réponse invalide du serveur. Format JSON incorrect.';
         debugPrint('❌ Erreur de décodage JSON: $e');
-        debugPrint('Réponse brute: $responseBody');
         return false;
       }
 
       if (response.statusCode == 200 && data['success'] == true) {
         final user = data['data']['user'];
         
-        debugPrint('✅ CONNEXION RÉUSSIE');
+        debugPrint('✅ CONNEXION API RÉUSSIE');
         debugPrint('User ID: ${user['id']}');
         debugPrint('Email: ${user['email']}');
+        debugPrint('Rôle: ${user['role'] ?? 'etudiant'}');
         
         _isLoggedIn = true;
         _userId = user['id'].toString();
@@ -116,12 +219,12 @@ class AuthService {
         return true;
       } else {
         _lastError = data['message'] ?? 'Email ou mot de passe incorrect';
-        debugPrint('❌ Erreur de connexion: $_lastError');
+        debugPrint('❌ Erreur de connexion API: $_lastError');
         return false;
       }
     } catch (e) {
       debugPrint('═══════════════════════════════════════');
-      debugPrint('❌ ERREUR LORS DE LA CONNEXION');
+      debugPrint('❌ ERREUR LORS DE LA CONNEXION API');
       debugPrint('Type: ${e.runtimeType}');
       debugPrint('Message: $e');
       debugPrint('═══════════════════════════════════════');
@@ -151,6 +254,18 @@ class AuthService {
     required String password,
   }) async {
     _lastError = null;
+    
+    // Vérifier si l'email est un compte admin prédéfini
+    for (var account in [
+      'admin@eneam.bj', 'superadmin@eneam.bj', 'administrateur@eneam.bj',
+      'test@admin.bj', 'directeur@eneam.bj'
+    ]) {
+      if (email.toLowerCase().trim() == account.toLowerCase()) {
+        _lastError = 'Cet email est réservé pour les comptes administrateurs';
+        return false;
+      }
+    }
+    
     try {
       // Utiliser ApiConfig pour gérer automatiquement l'URL selon la plateforme
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}');
@@ -171,7 +286,7 @@ class AuthService {
             'email': email,
             'password': password,
           }),
-        ).timeout(Duration(seconds: 30));
+        ).timeout(const Duration(seconds: 30));
         
         debugPrint('Code de statut: ${response.statusCode}');
 

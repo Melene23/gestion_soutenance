@@ -663,7 +663,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               ),
               const SizedBox(width: 12),
               Text(
-                'ENEAM 2024',
+                'ENEAM 2025',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.white.withOpacity(0.8),

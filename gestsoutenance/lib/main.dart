@@ -519,7 +519,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-      ),
+      )
     );
   }
 
@@ -553,46 +553,38 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget? _buildFloatingActionButton() {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, _) {
-        // Seuls les admins peuvent ajouter des éléments
-        if (!authProvider.isAdmin) {
-          return const SizedBox.shrink();
-        }
-        
-        final String tooltip = _getFABTooltip();
-        
-        return FloatingActionButton(
-          onPressed: () {
-            _navigateToAddPage();
-          },
-          tooltip: tooltip,
-          child: Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF6366F1).withOpacity(0.4),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.add_rounded,
-              size: 28,
-              color: Colors.white,
-            ),
-          ),
-        );
+    // MODIFICATION : Retirer la condition admin, bouton visible pour tous
+    final String tooltip = _getFABTooltip();
+    
+    return FloatingActionButton(
+      onPressed: () {
+        _navigateToAddPage();
       },
+      tooltip: tooltip,
+      child: Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6366F1).withOpacity(0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.add_rounded,
+          size: 28,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
@@ -612,13 +604,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _navigateToAddPage() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    // Vérifier que l'utilisateur est admin
-    if (!authProvider.isAdmin) {
-      _showSnackBar('Accès réservé aux administrateurs');
-      return;
-    }
+    // MODIFICATION : Retirer la vérification admin, accessible à tous
     
     switch (_selectedIndex) {
       case 0:
